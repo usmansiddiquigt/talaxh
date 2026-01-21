@@ -13,6 +13,8 @@ import {
   View,
 } from 'react-native';
 
+const API_URL = 'http://192.168.100.69:5000'; // <-- your PC IP
+
 export default function SignupScreen({ navigation }) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -32,19 +34,40 @@ export default function SignupScreen({ navigation }) {
     return true;
   }, [fullName, email, phone, password, confirmPassword]);
 
-  const onSignup = () => {
-    // TODO: integrate signup API
-    alert('Sign Up pressed');
+  const onSignup = async () => {
+    try {
+      const res = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName,
+          email,
+          phone,
+          password,
+          confirmPassword,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || 'Signup failed');
+        return;
+      }
+
+      alert('Signup successful ✅');
+      navigation.navigate('Login');
+    } catch (err) {
+      alert('Network error: ' + err.message);
+    }
   };
 
   const onGoogle = () => {
-    // TODO: integrate Google auth
-    alert('Google pressed');
+    alert('Google pressed (not implemented yet)');
   };
 
   const onApple = () => {
-    // TODO: integrate Apple auth
-    alert('Apple pressed');
+    alert('Apple pressed (not implemented yet)');
   };
 
   return (
@@ -180,7 +203,7 @@ export default function SignupScreen({ navigation }) {
               onPress={onApple}
               activeOpacity={0.9}
             >
-              {/* Using an Apple icon close to the "ios" symbol */}
+              {/* If "apple" icon errors on your setup, replace with "phone-iphone" */}
               <MaterialIcons name='apple' size={22} color={TEXT} />
               <Text style={styles.socialText}>Apple</Text>
             </TouchableOpacity>
@@ -243,7 +266,6 @@ function Field({
 }
 
 const PRIMARY = '#2563eb';
-const PRIMARY_DARK = '#1d4ed8';
 const BG = '#f8fafc';
 const SURFACE = '#ffffff';
 const TEXT = '#0f172a';
