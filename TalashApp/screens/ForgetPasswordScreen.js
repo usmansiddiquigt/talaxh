@@ -12,12 +12,46 @@ import {
   View,
 } from 'react-native';
 
+const API_URL = 'http://192.168.100.69:5000';
+//const API_URL = process.env.EXPORT_API_URL; // <-- your PC IP (same as signup)
+
 export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('');
 
-  const onSend = () => {
-    // TODO: call your reset password API
-    alert(`Reset link will be sent to: ${email}`);
+  const onSend = async () => {
+    if (!email.trim()) {
+      alert('Please enter your email');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || 'Failed to send reset link');
+        return;
+      }
+
+      // Demo: show token (in production you email it)
+      if (data.resetToken) {
+        alert(`Reset link sent (demo) ✅\nToken: ${data.resetToken}`);
+      } else {
+        alert(
+          data.message || 'If the email exists, a reset link has been sent.',
+        );
+      }
+
+      // Optional: go back to login
+      // navigation.navigate("Login");
+    } catch (err) {
+      alert('Network error: ' + err.message);
+    }
   };
 
   return (
@@ -26,101 +60,76 @@ export default function ForgotPasswordScreen({ navigation }) {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={{ flex: 1 }}>
-          <ScrollView
-            contentContainerStyle={styles.container}
-            keyboardShouldPersistTaps='handled'
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Top bar */}
-            <View style={styles.topBar}>
-              <TouchableOpacity
-                onPress={() => navigation.goBack()}
-                style={styles.backBtn}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <MaterialIcons name='chevron-left' size={28} color={PRIMARY} />
-              </TouchableOpacity>
-
-              <View style={styles.topCenter}>
-                <Text style={styles.topCenterText}>WHERE HOPE MATTERS!</Text>
-              </View>
-
-              {/* spacer to balance layout */}
-              <View style={{ width: 40 }} />
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps='handled'
+        >
+          {/* Top bar */}
+          <View style={styles.topBar}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => navigation.goBack()}
+            >
+              <MaterialIcons name='chevron-left' size={28} color={PRIMARY} />
+            </TouchableOpacity>
+            <View style={styles.topCenter}>
+              <Text style={styles.topCenterText}>WHERE HOPE MATTERS!</Text>
             </View>
-
-            {/* Icon card */}
-            <View style={styles.heroWrap}>
-              <View style={styles.heroOuter}>
-                <MaterialIcons name='lock-reset' size={44} color={PRIMARY} />
-              </View>
-
-              <View style={styles.keyBadge}>
-                <MaterialIcons name='key' size={20} color={PRIMARY} />
-              </View>
-            </View>
-
-            {/* Title + description */}
-            <Text style={styles.title}>Forgot Password?</Text>
-            <Text style={styles.desc}>
-              No worries! Enter your registered email address below and we'll
-              send you a link to reset your password.
-            </Text>
-
-            {/* Form */}
-            <View style={styles.form}>
-              <Text style={styles.label}>Email Address</Text>
-
-              <View style={styles.inputWrap}>
-                <MaterialIcons
-                  name='mail-outline'
-                  size={20}
-                  color={PRIMARY_60}
-                />
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder='e.g., alex@example.com'
-                  placeholderTextColor='#94a3b8'
-                  keyboardType='email-address'
-                  autoCapitalize='none'
-                  style={styles.input}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={styles.primaryBtn}
-                onPress={onSend}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.primaryBtnText}>Send Reset Link</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Bottom content */}
-            <View style={styles.bottomArea}>
-              <TouchableOpacity
-                style={styles.backToLoginBtn}
-                onPress={() => navigation.navigate('Login')}
-                activeOpacity={0.9}
-              >
-                <MaterialIcons name='arrow-back' size={18} color={PRIMARY} />
-                <Text style={styles.backToLoginText}>Back to Login</Text>
-              </TouchableOpacity>
-
-              <Text style={styles.footerText}>Talaxh: Where hope matters!</Text>
-            </View>
-          </ScrollView>
-
-          {/* Bottom color strip */}
-          <View style={styles.bottomStrip}>
-            <View style={[styles.strip, { backgroundColor: PRIMARY }]} />
-            <View style={[styles.strip, { backgroundColor: '#60a5fa' }]} />
-            <View style={[styles.strip, { backgroundColor: PRIMARY }]} />
-            <View style={[styles.strip, { backgroundColor: '#60a5fa' }]} />
+            <View style={{ width: 40 }} />
           </View>
-        </View>
+
+          <View style={styles.heroWrap}>
+            <View style={styles.heroOuter}>
+              <MaterialIcons name='lock-reset' size={44} color={PRIMARY} />
+            </View>
+            <View style={styles.keyBadge}>
+              <MaterialIcons name='key' size={20} color={PRIMARY} />
+            </View>
+          </View>
+
+          <Text style={styles.title}>Forgot Password?</Text>
+          <Text style={styles.desc}>
+            No worries! Enter your registered email address below and we'll send
+            you a link to reset your password.
+          </Text>
+
+          <View style={styles.form}>
+            <Text style={styles.label}>Email Address</Text>
+
+            <View style={styles.inputWrap}>
+              <MaterialIcons name='mail-outline' size={20} color={PRIMARY_60} />
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                placeholder='e.g., alex@example.com'
+                placeholderTextColor='#94a3b8'
+                keyboardType='email-address'
+                autoCapitalize='none'
+                style={styles.input}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={onSend}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.primaryBtnText}>Send Reset Link</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.bottomArea}>
+            <TouchableOpacity
+              style={styles.backToLoginBtn}
+              onPress={() => navigation.navigate('Login')}
+            >
+              <MaterialIcons name='arrow-back' size={18} color={PRIMARY} />
+              <Text style={styles.backToLoginText}>Back to Login</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.footerText}>Talaxh: Where hope matters!</Text>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -133,11 +142,7 @@ const TEXT = '#0f172a';
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: BG },
-  container: {
-    flexGrow: 1,
-    backgroundColor: BG,
-    paddingBottom: 60, // room above bottom strip
-  },
+  container: { flexGrow: 1, backgroundColor: BG, paddingBottom: 30 },
 
   topBar: {
     flexDirection: 'row',
@@ -154,11 +159,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  topCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginRight: 40, // mimic your HTML centering offset
-  },
+  topCenter: { flex: 1, alignItems: 'center', marginRight: 40 },
   topCenterText: {
     fontSize: 10,
     letterSpacing: 3,
@@ -216,10 +217,7 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
 
-  form: {
-    paddingHorizontal: 24,
-    marginTop: 22,
-  },
+  form: { paddingHorizontal: 24, marginTop: 22 },
   label: {
     fontSize: 13,
     fontWeight: '800',
@@ -243,11 +241,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 1,
   },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    color: TEXT,
-  },
+  input: { flex: 1, fontSize: 15, color: TEXT },
 
   primaryBtn: {
     marginTop: 18,
@@ -270,17 +264,12 @@ const styles = StyleSheet.create({
   },
 
   bottomArea: {
-    marginTop: 'auto',
-    paddingTop: 30,
-    paddingBottom: 12,
+    marginTop: 30,
     alignItems: 'center',
     gap: 14,
+    paddingBottom: 10,
   },
-  backToLoginBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+  backToLoginBtn: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   backToLoginText: {
     fontSize: 13,
     fontWeight: '900',
@@ -293,15 +282,4 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     color: '#94a3b8',
   },
-
-  bottomStrip: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 6,
-    opacity: 0.3,
-    flexDirection: 'row',
-  },
-  strip: { flex: 1 },
 });

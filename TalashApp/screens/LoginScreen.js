@@ -13,13 +13,41 @@ import {
   View,
 } from 'react-native';
 
+const API_URL = 'http://192.168.100.69:5000';
+//const API_URL = process.env.EXPORT_API_URL; // <-- your PC IP (same as signup)
+//const API_URL = process.env.EXPORT_API_URL;
+
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    // TODO: replace with real auth
-    alert(`Email: ${email}\nPassword: ${password}`);
+  const handleLogin = async () => {
+    if (!email.trim() || !password) {
+      alert('Please enter email and password');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || 'Login failed');
+        return;
+      }
+
+      navigation.replace('Welcome');
+      // Since you don't have dashboard, we just show the welcome message.
+      // Optionally clear fields:
+      setPassword('');
+    } catch (err) {
+      alert('Network error: ' + err.message);
+    }
   };
 
   return (
@@ -131,8 +159,7 @@ export default function LoginScreen({ navigation }) {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              Don&apos;t have an account?
-              <Text> </Text>
+              Don&apos;t have an account?{' '}
               <Text
                 style={styles.footerLink}
                 onPress={() => navigation.navigate('Signup')}
@@ -209,11 +236,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    color: TEXT,
-  },
+  input: { flex: 1, fontSize: 15, color: TEXT },
 
   forgotRow: { alignItems: 'flex-end', paddingTop: 2 },
   forgotText: { fontSize: 13, fontWeight: '700', color: PRIMARY },
