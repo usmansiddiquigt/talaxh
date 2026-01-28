@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 
-const API_URL = 'http://192.168.100.69:5000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 //const API_URL = process.env.EXPORT_API_URL; // <-- your PC IP (same as signup)
 //const API_URL = process.env.EXPORT_API_URL;
 
