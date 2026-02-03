@@ -8,7 +8,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ForgotPasswordScreen from './screens/ForgetPasswordScreen';
 import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
-import WelcomeScreen from './screens/WelcomeScreen';
+
+// NEW: bottom tabs
+import BottomTabs from './screens/BottomTabs';
 
 const Stack = createNativeStackNavigator();
 
@@ -22,7 +24,9 @@ export default function App() {
         <Stack.Screen name='Login' component={LoginScreen} />
         <Stack.Screen name='Signup' component={SignupScreen} />
         <Stack.Screen name='ForgotPassword' component={ForgotPasswordScreen} />
-        <Stack.Screen name='Welcome' component={WelcomeScreen} />
+
+        {/* After login, go here */}
+        <Stack.Screen name='Main' component={BottomTabs} />
       </Stack.Navigator>
     </NavigationContainer>
   );

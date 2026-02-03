@@ -41,7 +41,7 @@ export default function LoginScreen({ navigation }) {
         return;
       }
 
-      navigation.replace('Welcome');
+      navigation.replace('Main');
       // Since you don't have dashboard, we just show the welcome message.
       // Optionally clear fields:
       setPassword('');
