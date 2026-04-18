@@ -1,479 +1,233 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  Image,
-  SafeAreaView,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useAuth } from '../context/AuthContext';
 
-export default function ProfileScreen({ navigation }) {
-  const [tab, setTab] = useState('My Ads');
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const PRIMARY = '#2C097F';
 
-  const listings = useMemo(
-    () => [
+const MENU_ITEMS = [
+  { icon: 'post-add', label: 'My Listings', screen: 'MyListings' },
+  { icon: 'favorite-border', label: 'Saved Pets', screen: 'Favorites' },
+  { icon: 'chat-bubble-outline', label: 'Messages', screen: 'Messages' },
+];
+
+const SETTINGS_ITEMS = [
+  { icon: 'notifications-none', label: 'Notifications' },
+  { icon: 'privacy-tip', label: 'Privacy & Security' },
+  { icon: 'help-outline', label: 'Help & Support' },
+  { icon: 'info-outline', label: 'About Talash' },
+];
+
+export default function AccountScreen({ navigation }) {
+  const { user, token, signOut, updateUser } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    fullName: user?.fullName || '',
+    phone: user?.phone || '',
+    location: user?.location || '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setForm({
+      fullName: user?.fullName || '',
+      phone: user?.phone || '',
+      location: user?.location || '',
+    });
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!token) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_URL}/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fullName: form.fullName, phone: form.phone, location: form.location }),
+      });
+      const data = await res.json();
+      if (!res.ok) { Alert.alert('Error', data.message); return; }
+      await updateUser({ fullName: form.fullName, phone: form.phone, location: form.location });
+      setEditing(false);
+      Alert.alert('Saved', 'Profile updated successfully');
+    } catch {
+      Alert.alert('Error', 'Could not save changes');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert('Log Out', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
       {
-        id: '1',
-        title: 'iPhone 14 Pro - 128GB',
-        price: '$850',
-        metaIcon: 'visibility',
-        metaText: '124 views',
-        image:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuDddnX8pXXFmYaxRrPjxM-2JPKDjCwdNXXvDL3OLiqqY_QYkwWv88eIZTVIJN6_9kuPfWML7noMNa7tI6aFsFxSepno3P7nTnZfM73pdKN6JykfIFzbE2rHOqLlim6Ydi_VIFGMgGRYUGsREG68VIG2QcDjYNgQGuLD8hshGRtFL8ppX0Nw3bj8qlLaZ7DIKOP42OdYDAvkKeBlmc8IcAgweFqDm6PY0Xacxsx0ysGwUq-TaEX0a1NbNjJ_hxR2UbaF7BZhoZuphIw',
-        badge: null,
+        text: 'Log Out',
+        style: 'destructive',
+        onPress: async () => { await signOut(); navigation.replace('Login'); },
       },
-      {
-        id: '2',
-        title: 'MacBook Air M2 Silver',
-        price: '$1,100',
-        metaIcon: 'visibility',
-        metaText: '89 views',
-        image:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuDix9nGN6MRnW_gfEUDYeMth_OgwWXuhwB_gmo4jezBNg83kz7bo30ZQtZEuO07pFBVSMzcZtiDIwk0OR217wA_7IAHK3mEinH4NDDLZ2HAGURLmr7lOplMXSYTZPBCM7QuuXfxKmj3GqRcf61r_TSygH9A6Yy0-Qx0MdJ2N5SG0WPOkqPcv8-QSDj5LzjJQngfaxLhfIyVKB3zaGQWc3dxWkzV6AkZKl3yNKdc2lnUTe0P6GEIyR6QebTvAFq1yI0PVEWnoS4hGyM',
-        badge: null,
-      },
-      {
-        id: '3',
-        title: 'Found: Car Keys (BMW)',
-        price: null,
-        metaIcon: 'location-on',
-        metaText: 'Downtown Area',
-        image:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuB-OGQWRsmnvJ_07nMY-Pb9CNkrKXNN4hTacftpakL90qa3VGb9XuR0uoGncKeRyZ2lFTgjIfVl1IPA4ihxp_rzs4rDPp9NDRMz_GI3s7ONugbctOEdItcz2sir7ymV80ujsXUYtnQW7Agl2he8KiRsW0fNVGfzbmK-k8DluPFUtp9VvMhl4MoINbeDPQNi0ezuxJ112RDLqe2PhtrxShagE4GX5U1cdhM_zYSS0JW4HNn_ED7sLIU_QCJPlBuoF1kRtZDw7w6-s3U',
-        badge: 'MISSING ITEM',
-      },
-    ],
-    [],
-  );
+    ]);
+  };
 
-  const stats = useMemo(
-    () => [
-      { label: 'Active Ads', value: '5' },
-      { label: 'Total Views', value: '1.2k' },
-    ],
-    [],
-  );
+  const initials = (user?.fullName || user?.email || 'U')
+    .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
-  const onEdit = (id) => alert(`Edit listing: ${id}`);
-  const onDelete = (id) => alert(`Delete listing: ${id}`);
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.notSignedIn}>
+          <MaterialIcons name="person-outline" size={72} color="#cbd5e1" />
+          <Text style={styles.signInTitle}>You're not signed in</Text>
+          <Text style={styles.signInSub}>Sign in to manage your listings and messages</Text>
+          <TouchableOpacity style={styles.signInBtn} onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.signInBtnText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Top App Bar */}
-      <View style={styles.topBar}>
-        <View style={styles.topLeft}>
-          <TouchableOpacity
-            style={styles.iconCircle}
-            onPress={() => navigation?.goBack?.()}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <MaterialIcons name='arrow-back-ios' size={18} color={TEXT} />
-          </TouchableOpacity>
-          <Text style={styles.topTitle}>Dashboard</Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.iconCircle}
-          onPress={() => alert('Settings')}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <MaterialIcons name='settings' size={20} color={TEXT} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarWrap}>
-            <Image
-              source={{
-                uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAuyl1c5aeLb0tRAdAZyojkCJXGr2Qs3oVc9fmYL5zZx8pkMn-sT4ViEBHvJkD4fQP8BthMHfRZ37IN-TrnQaj7kp7iISYJASuZEbiO_CfzCnhf2YLeKgm6jve8g7e55VuyYomxDBel08SPgURtPQiTUSquSsMQg4ET9DrZX6vqGahHhAnO9aw4zxHGFCbo5JdVVCpvRuGCM6rSJoMyd2R34KmKo8u3KqV8bDQE5niWQ_5TsyqWTLHuCV3fpVCpp9ML6PRvGx3KKlw',
-              }}
-              style={styles.avatar}
-            />
-            <View style={styles.verifiedBadge}>
-              <MaterialIcons name='verified' size={16} color='#fff' />
-            </View>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Account</Text>
+            <TouchableOpacity onPress={() => editing ? handleSave() : setEditing(true)} disabled={saving}>
+              <Text style={styles.editBtn}>{editing ? (saving ? 'Saving...' : 'Save') : 'Edit'}</Text>
+            </TouchableOpacity>
           </View>
 
-          <Text style={styles.name}>John Doe</Text>
-
-          <View style={styles.subRow}>
-            <Text style={styles.joined}>Joined: Oct 2023</Text>
-            <View style={styles.bullet} />
-            <Text style={styles.subMuted}>Verified User</Text>
-          </View>
-
-          <View style={styles.chipsRow}>
-            <Chip icon='check-circle' text='Phone Verified' />
-            <Chip icon='check-circle' text='Email Verified' />
-          </View>
-        </View>
-
-        {/* Stats */}
-        <View style={styles.statsRow}>
-          {stats.map((s) => (
-            <View key={s.label} style={styles.statCard}>
-              <Text style={styles.statLabel}>{s.label}</Text>
-              <Text style={styles.statValue}>{s.value}</Text>
+          {/* Profile card */}
+          <View style={styles.profileCard}>
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarText}>{initials}</Text>
             </View>
-          ))}
-        </View>
-
-        {/* Tabs */}
-        <View style={styles.tabsWrap}>
-          <TabBtn
-            title='My Ads'
-            active={tab === 'My Ads'}
-            onPress={() => setTab('My Ads')}
-          />
-          <TabBtn
-            title='Messages'
-            active={tab === 'Messages'}
-            onPress={() => setTab('Messages')}
-          />
-          <TabBtn
-            title='Alerts'
-            active={tab === 'Alerts'}
-            onPress={() => setTab('Alerts')}
-          />
-        </View>
-
-        {/* Content */}
-        <View style={styles.listWrap}>
-          {tab !== 'My Ads' ? (
-            <View style={styles.emptyState}>
-              <MaterialIcons name='info-outline' size={22} color='#94a3b8' />
-              <Text style={styles.emptyText}>
-                {tab === 'Messages' ? 'No messages yet.' : 'No alerts yet.'}
-              </Text>
-            </View>
-          ) : (
-            listings.map((item) => (
-              <View key={item.id} style={styles.listing}>
-                <Image source={{ uri: item.image }} style={styles.listingImg} />
-
-                <View style={{ flex: 1, justifyContent: 'space-between' }}>
-                  <View>
-                    <View style={styles.listingTopRow}>
-                      <Text style={styles.listingTitle} numberOfLines={1}>
-                        {item.title}
-                      </Text>
-
-                      {item.price ? (
-                        <Text style={styles.price}>{item.price}</Text>
-                      ) : item.badge ? (
-                        <View style={styles.badge}>
-                          <Text style={styles.badgeText}>{item.badge}</Text>
-                        </View>
-                      ) : null}
-                    </View>
-
-                    <View style={styles.metaRow}>
-                      <MaterialIcons
-                        name={item.metaIcon}
-                        size={14}
-                        color='#94a3b8'
-                      />
-                      <Text style={styles.metaText}>{item.metaText}</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.actionsRow}>
-                    <TouchableOpacity
-                      style={styles.editBtn}
-                      onPress={() => onEdit(item.id)}
-                      activeOpacity={0.9}
-                    >
-                      <Text style={styles.editText}>Edit</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.delBtn}
-                      onPress={() => onDelete(item.id)}
-                      activeOpacity={0.9}
-                    >
-                      <Text style={styles.delText}>Delete</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+            {editing ? (
+              <View style={styles.editFields}>
+                <TextInput style={styles.editInput} value={form.fullName} onChangeText={v => setForm(p => ({ ...p, fullName: v }))} placeholder="Full Name" />
+                <TextInput style={styles.editInput} value={form.phone} onChangeText={v => setForm(p => ({ ...p, phone: v }))} placeholder="Phone Number" keyboardType="phone-pad" />
+                <TextInput style={styles.editInput} value={form.location} onChangeText={v => setForm(p => ({ ...p, location: v }))} placeholder="City / Location" />
               </View>
-            ))
-          )}
-        </View>
-      </ScrollView>
+            ) : (
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>{user.fullName || 'No name set'}</Text>
+                <Text style={styles.profileEmail}>{user.email}</Text>
+                {user.phone ? <View style={styles.metaRow}><MaterialIcons name="phone" size={14} color="#94a3b8" /><Text style={styles.metaText}>{user.phone}</Text></View> : null}
+                {user.location ? <View style={styles.metaRow}><MaterialIcons name="place" size={14} color="#94a3b8" /><Text style={styles.metaText}>{user.location}</Text></View> : null}
+              </View>
+            )}
+          </View>
 
-      {/* Bottom Nav (UI only, same as HTML) */}
+          {/* Quick links */}
+          <Text style={styles.sectionTitle}>MY ACTIVITY</Text>
+          <View style={styles.menuCard}>
+            {MENU_ITEMS.map((item, i) => (
+              <TouchableOpacity
+                key={item.label}
+                style={[styles.menuRow, i < MENU_ITEMS.length - 1 && styles.menuBorder]}
+                onPress={() => navigation.navigate(item.screen)}
+              >
+                <View style={styles.menuIconWrap}>
+                  <MaterialIcons name={item.icon} size={20} color={PRIMARY} />
+                </View>
+                <Text style={styles.menuLabel}>{item.label}</Text>
+                <MaterialIcons name="chevron-right" size={22} color="#94a3b8" />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.sectionTitle}>SETTINGS</Text>
+          <View style={styles.menuCard}>
+            {SETTINGS_ITEMS.map((item, i) => (
+              <TouchableOpacity
+                key={item.label}
+                style={[styles.menuRow, i < SETTINGS_ITEMS.length - 1 && styles.menuBorder]}
+                onPress={() => Alert.alert(item.label, 'Coming soon')}
+              >
+                <View style={[styles.menuIconWrap, { backgroundColor: '#f1f5f9' }]}>
+                  <MaterialIcons name={item.icon} size={20} color="#64748b" />
+                </View>
+                <Text style={styles.menuLabel}>{item.label}</Text>
+                <MaterialIcons name="chevron-right" size={22} color="#94a3b8" />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+            <MaterialIcons name="logout" size={20} color="#ef4444" />
+            <Text style={styles.logoutText}>Log Out</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-/* ---------------- Small Components ---------------- */
-
-function Chip({ icon, text }) {
-  return (
-    <View style={styles.chip}>
-      <MaterialIcons name={icon} size={16} color={SUCCESS} />
-      <Text style={styles.chipText}>{text}</Text>
-    </View>
-  );
-}
-
-function TabBtn({ title, active, onPress }) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[styles.tabBtn, active && styles.tabBtnActive]}
-      activeOpacity={0.9}
-    >
-      <Text style={[styles.tabText, active && styles.tabTextActive]}>
-        {title}
-      </Text>
-    </TouchableOpacity>
-  );
-}
-
-function BottomItem({ icon, label, active }) {
-  return (
-    <View style={styles.bottomItem}>
-      <MaterialIcons
-        name={icon}
-        size={24}
-        color={active ? PRIMARY : '#94a3b8'}
-      />
-      <Text style={[styles.bottomText, active && { color: PRIMARY }]}>
-        {label}
-      </Text>
-    </View>
-  );
-}
-
-/* ---------------- Theme ---------------- */
-
-const PRIMARY = '#135bec';
-const BG = '#f6f6f8';
-const TEXT = '#0d121b';
-const SUCCESS = '#10b981';
-const DANGER = '#ef4444';
-
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BG },
-
-  topBar: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: BG,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  safe: { flex: 1, backgroundColor: '#f6f6f8' },
+  notSignedIn: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
+  signInTitle: { fontSize: 20, fontWeight: '700', color: '#0d121b' },
+  signInSub: { fontSize: 14, color: '#64748b', textAlign: 'center' },
+  signInBtn: { marginTop: 8, backgroundColor: PRIMARY, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 14 },
+  signInBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  header: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#fff',
+    borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
   },
-  topLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  topTitle: { fontSize: 20, fontWeight: '800', color: TEXT },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerTitle: { fontSize: 22, fontWeight: '800', color: '#0d121b' },
+  editBtn: { fontSize: 14, fontWeight: '700', color: PRIMARY },
+  profileCard: {
+    backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center',
+    gap: 14, padding: 20, marginBottom: 8,
   },
-
-  container: { paddingBottom: 120 },
-
-  profileHeader: {
-    alignItems: 'center',
-    paddingTop: 18,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
+  avatarCircle: {
+    width: 64, height: 64, borderRadius: 32, backgroundColor: PRIMARY,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  avatarWrap: { position: 'relative', marginBottom: 10 },
-  avatar: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    borderWidth: 4,
-    borderColor: '#fff',
+  avatarText: { fontSize: 22, fontWeight: '800', color: '#fff' },
+  profileInfo: { flex: 1 },
+  profileName: { fontSize: 18, fontWeight: '700', color: '#0d121b' },
+  profileEmail: { fontSize: 13, color: '#64748b', marginTop: 2 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  metaText: { fontSize: 13, color: '#94a3b8' },
+  editFields: { flex: 1, gap: 8 },
+  editInput: {
+    backgroundColor: '#f6f6f8', borderRadius: 10, paddingHorizontal: 12,
+    paddingVertical: 9, fontSize: 14, color: '#0d121b',
+    borderWidth: 1, borderColor: '#e2e8f0',
   },
-  verifiedBadge: {
-    position: 'absolute',
-    bottom: 6,
-    right: 6,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: SUCCESS,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 4,
-    borderColor: BG,
+  sectionTitle: {
+    fontSize: 12, fontWeight: '700', color: '#94a3b8', paddingHorizontal: 16,
+    paddingVertical: 10, letterSpacing: 0.8,
   },
-  name: { fontSize: 24, fontWeight: '900', color: TEXT },
-  subRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  joined: { color: PRIMARY, fontSize: 12, fontWeight: '700' },
-  bullet: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#94a3b8' },
-  subMuted: { color: '#64748b', fontSize: 12, fontWeight: '600' },
-
-  chipsRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: 'rgba(16,185,129,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.20)',
+  menuCard: { backgroundColor: '#fff', marginBottom: 8 },
+  menuRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
+  menuBorder: { borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  menuIconWrap: {
+    width: 36, height: 36, borderRadius: 10, backgroundColor: '#f0ebff',
+    alignItems: 'center', justifyContent: 'center',
   },
-  chipText: { fontSize: 12, fontWeight: '800', color: SUCCESS },
-
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingTop: 4,
+  menuLabel: { flex: 1, fontSize: 15, fontWeight: '500', color: '#0d121b' },
+  logoutBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginHorizontal: 16, marginTop: 8, paddingVertical: 14, borderRadius: 14,
+    borderWidth: 1.5, borderColor: '#fee2e2', backgroundColor: '#fff',
   },
-  statCard: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#eef2f7',
-    alignItems: 'center',
-  },
-  statLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#64748b',
-    marginBottom: 6,
-  },
-  statValue: { fontSize: 22, fontWeight: '900', color: PRIMARY },
-
-  tabsWrap: {
-    marginTop: 14,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-  },
-  tabBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabBtnActive: { borderBottomColor: PRIMARY },
-  tabText: {
-    textAlign: 'center',
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#64748b',
-  },
-  tabTextActive: { color: PRIMARY },
-
-  listWrap: { paddingHorizontal: 16, paddingTop: 14, gap: 12 },
-  listing: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#eef2f7',
-    flexDirection: 'row',
-    gap: 12,
-  },
-  listingImg: { width: 96, height: 96, borderRadius: 14 },
-
-  listingTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  listingTitle: { flex: 1, fontSize: 14, fontWeight: '900', color: TEXT },
-  price: { fontSize: 12, fontWeight: '900', color: PRIMARY },
-
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(19,91,236,0.10)',
-    alignSelf: 'flex-start',
-  },
-  badgeText: { fontSize: 10, fontWeight: '900', color: PRIMARY },
-
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
-  metaText: { fontSize: 11, fontWeight: '700', color: '#64748b' },
-
-  actionsRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
-  editBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: PRIMARY,
-    borderRadius: 999,
-    paddingVertical: 7,
-    alignItems: 'center',
-  },
-  editText: { color: PRIMARY, fontSize: 12, fontWeight: '900' },
-  delBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.35)',
-    borderRadius: 999,
-    paddingVertical: 7,
-    alignItems: 'center',
-  },
-  delText: { color: DANGER, fontSize: 12, fontWeight: '900' },
-
-  emptyState: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#eef2f7',
-    padding: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  emptyText: { color: '#64748b', fontWeight: '800' },
-
-  //   bottomNav: {
-  //     position: 'absolute',
-  //     left: 0,
-  //     right: 0,
-  //     bottom: 0,
-  //     backgroundColor: 'rgba(255,255,255,0.95)',
-  //     borderTopWidth: 1,
-  //     borderColor: '#e5e7eb',
-  //     paddingHorizontal: 24,
-  //     paddingTop: 10,
-  //     paddingBottom: 22,
-  //     flexDirection: 'row',
-  //     justifyContent: 'space-between',
-  //     alignItems: 'flex-end',
-  //   },
-  //   bottomItem: { alignItems: 'center', gap: 4, width: 64 },
-  bottomText: { fontSize: 10, fontWeight: '900', color: '#94a3b8' },
-
-  sellWrap: { width: 64, alignItems: 'center' },
-  sellBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: PRIMARY,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 4,
-    borderColor: BG,
-    shadowColor: PRIMARY,
-    shadowOpacity: 0.25,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
-    marginBottom: 6,
-  },
+  logoutText: { fontSize: 15, fontWeight: '700', color: '#ef4444' },
 });

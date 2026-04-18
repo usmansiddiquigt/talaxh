@@ -2,26 +2,17 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StyleSheet, View } from 'react-native';
 
-// Screens
-import AccountScreen from './AccountScreen'; // Dashboard/Profile (the code I gave you)
-import WelcomeScreen from './WelcomeScreen'; // Home
-
-// Simple placeholders (you can replace later)
-import { Text } from 'react-native';
-function ChatsScreen() {
-  return <Text style={{ padding: 20 }}>Chats coming soon</Text>;
-}
-function MyAdsScreen() {
-  return <Text style={{ padding: 20 }}>My Ads coming soon</Text>;
-}
-function SellScreen() {
-  return <Text style={{ padding: 20 }}>Sell/Create Ad coming soon</Text>;
-}
+import AccountScreen from './AccountScreen';
+import FavoritesScreen from './FavoritesScreen';
+import HomeScreen from './HomeScreen';
+import MessagesScreen from './MessagesScreen';
 
 const Tab = createBottomTabNavigator();
-
 const PRIMARY = '#2C097F';
 const INACTIVE = '#94a3b8';
+
+// Placeholder for Post — FAB navigates via stack
+function PostPlaceholder() { return null; }
 
 export default function BottomTabs() {
   return (
@@ -37,28 +28,26 @@ export default function BottomTabs() {
     >
       <Tab.Screen
         name='Home'
-        component={WelcomeScreen}
+        component={HomeScreen}
         options={{
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons name='home' size={24} color={color} />
-          ),
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color }) => <MaterialIcons name='home' size={24} color={color} />,
         }}
       />
 
       <Tab.Screen
-        name='Chats'
-        component={ChatsScreen}
+        name='Messages'
+        component={MessagesScreen}
         options={{
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons name='chat-bubble' size={22} color={color} />
-          ),
+          tabBarLabel: 'Messages',
+          tabBarIcon: ({ color }) => <MaterialIcons name='chat-bubble-outline' size={22} color={color} />,
         }}
       />
 
-      {/* Center Floating Action Button */}
+      {/* Center FAB — taps navigate to PostListing stack screen */}
       <Tab.Screen
-        name='Sell'
-        component={SellScreen}
+        name='PostTab'
+        component={PostPlaceholder}
         options={{
           tabBarLabel: '',
           tabBarIcon: () => (
@@ -71,21 +60,18 @@ export default function BottomTabs() {
         }}
         listeners={({ navigation }) => ({
           tabPress: (e) => {
-            // Optional: prevent default if you want a modal
-            // e.preventDefault();
-            // navigation.navigate('SellModal');
+            e.preventDefault();
+            navigation.navigate('PostListing');
           },
         })}
       />
 
       <Tab.Screen
-        name='MyAds'
-        component={MyAdsScreen}
+        name='Favorites'
+        component={FavoritesScreen}
         options={{
-          tabBarLabel: 'My Ads',
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons name='favorite' size={22} color={color} />
-          ),
+          tabBarLabel: 'Saved',
+          tabBarIcon: ({ color }) => <MaterialIcons name='favorite-border' size={22} color={color} />,
         }}
       />
 
@@ -94,13 +80,7 @@ export default function BottomTabs() {
         component={AccountScreen}
         options={{
           tabBarLabel: 'Account',
-          tabBarIcon: ({ color, focused }) => (
-            <MaterialIcons
-              name='person'
-              size={24}
-              color={focused ? PRIMARY : color}
-            />
-          ),
+          tabBarIcon: ({ color }) => <MaterialIcons name='person-outline' size={24} color={color} />,
         }}
       />
     </Tab.Navigator>
@@ -116,15 +96,12 @@ const styles = StyleSheet.create({
     borderTopColor: '#e5e7eb',
     backgroundColor: '#fff',
   },
-  label: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
+  label: { fontSize: 10, fontWeight: '700' },
   fabWrap: {
     width: 64,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -26, // lift up
+    marginTop: -26,
   },
   fab: {
     width: 56,
@@ -134,11 +111,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: PRIMARY,
-    shadowOpacity: 0.25,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 5,
-    borderWidth: 4,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+    borderWidth: 3,
     borderColor: '#fff',
   },
 });

@@ -2,8 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import {
   Image,
-  Modal,
-  SafeAreaView,
+  Modal
   ScrollView,
   StyleSheet,
   Text,
@@ -73,7 +72,7 @@ export default function WelcomeScreen() {
   }, [location, activeCategory, search]);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    < style={styles.safe}>
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -171,7 +170,7 @@ export default function WelcomeScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </>
   );
 }
 

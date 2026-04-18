@@ -1,10 +1,10 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,11 +13,12 @@ import {
   View,
 } from 'react-native';
 
+import { useAuth } from '../context/AuthContext';
+
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
-//const API_URL = process.env.EXPORT_API_URL; // <-- your PC IP (same as signup)
-//const API_URL = process.env.EXPORT_API_URL;
 
 export default function LoginScreen({ navigation }) {
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -41,9 +42,8 @@ export default function LoginScreen({ navigation }) {
         return;
       }
 
+      await signIn(data.user, data.access_token);
       navigation.replace('Main');
-      // Since you don't have dashboard, we just show the welcome message.
-      // Optionally clear fields:
       setPassword('');
     } catch (err) {
       alert('Network error: ' + err.message);
