@@ -130,7 +130,7 @@ export default function ConversationScreen({ navigation, route }) {
           <View style={{ flex: 1 }}>
             <Text style={styles.listingTitle} numberOfLines={1}>{listing?.title || 'Pet Listing'}</Text>
             <Text style={styles.listingPrice}>
-              {listing?.is_free ? 'Free' : listing?.price ? `$${listing.price}` : ''}
+              {listing?.is_free ? 'Free' : listing?.price ? `PKR ${Number(listing.price).toLocaleString('en-PK')}` : ''}
             </Text>
           </View>
           <MaterialIcons name="chevron-right" size={18} color="#94a3b8" />

@@ -20,6 +20,7 @@ import BottomTabs from './screens/BottomTabs';
 // Stack screens (accessible from inside tabs)
 import PetDetailScreen from './screens/PetDetailScreen';
 import PostListingScreen from './screens/PostListingScreen';
+import BreedSelectScreen from './screens/BreedSelectScreen';
 import MyListingsScreen from './screens/MyListingsScreen';
 import SellerProfileScreen from './screens/SellerProfileScreen';
 import ConversationScreen from './screens/ConversationScreen';
@@ -44,6 +45,7 @@ function RootNavigator() {
       {/* Stack screens pushed over tabs */}
       <Stack.Screen name='PetDetail' component={PetDetailScreen} />
       <Stack.Screen name='PostListing' component={PostListingScreen} />
+      <Stack.Screen name='BreedSelect' component={BreedSelectScreen} />
       <Stack.Screen name='MyListings' component={MyListingsScreen} />
       <Stack.Screen name='SellerProfile' component={SellerProfileScreen} />
       <Stack.Screen name='Conversation' component={ConversationScreen} />

@@ -21,6 +21,30 @@ const supabaseAnon = createClient(
   process.env.SUPABASE_ANON_KEY,
 );
 
+const LISTING_BUCKET = 'listing-photos';
+
+// Ensure the Storage bucket exists and is public at boot
+async function ensureBucket() {
+  try {
+    const { data: buckets } = await supabaseAdmin.storage.listBuckets();
+    const exists = (buckets || []).some(b => b.name === LISTING_BUCKET);
+    if (!exists) {
+      const { error } = await supabaseAdmin.storage.createBucket(LISTING_BUCKET, {
+        public: true,
+        fileSizeLimit: 10 * 1024 * 1024,
+      });
+      if (error) console.error('Failed to create bucket:', error.message);
+      else console.log(`✅ Created public bucket "${LISTING_BUCKET}"`);
+    } else {
+      // Make sure it's public (idempotent)
+      await supabaseAdmin.storage.updateBucket(LISTING_BUCKET, { public: true });
+    }
+  } catch (e) {
+    console.error('ensureBucket error:', e.message);
+  }
+}
+ensureBucket();
+
 // ── Auth middleware ───────────────────────────────────────────
 async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -214,10 +238,7 @@ app.get('/listings', async (req, res) => {
   try {
     let query = supabaseAdmin
       .from('listings')
-      .select(`
-        *,
-        profiles:seller_id ( full_name, avatar_url, location )
-      `, { count: 'exact' })
+      .select('*', { count: 'exact' })
       .eq('status', 'active')
       .range(offset, offset + Number(limit) - 1);
 
@@ -234,7 +255,23 @@ app.get('/listings', async (req, res) => {
     const { data, error, count } = await query;
     if (error) return res.status(400).json({ message: error.message });
 
-    return res.json({ listings: data || [], total: count || 0, page: Number(page), limit: Number(limit) });
+    // Attach seller profiles manually (no FK constraint needed)
+    const sellerIds = [...new Set((data || []).map(l => l.seller_id).filter(Boolean))];
+    let profileMap = {};
+    if (sellerIds.length) {
+      const { data: profiles } = await supabaseAdmin
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', sellerIds);
+      (profiles || []).forEach(p => { profileMap[p.id] = p; });
+    }
+
+    const listings = (data || []).map(l => ({
+      ...l,
+      profiles: profileMap[l.seller_id] || null,
+    }));
+
+    return res.json({ listings, total: count || 0, page: Number(page), limit: Number(limit) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: 'Server error' });
@@ -245,14 +282,22 @@ app.get('/listings/:id', async (req, res) => {
   try {
     const { data, error } = await supabaseAdmin
       .from('listings')
-      .select(`
-        *,
-        profiles:seller_id ( id, full_name, avatar_url, location, created_at, is_phone_verified, is_email_verified )
-      `)
+      .select('*')
       .eq('id', req.params.id)
       .single();
 
     if (error) return res.status(404).json({ message: 'Listing not found' });
+
+    // Attach seller profile manually
+    let profile = null;
+    if (data.seller_id) {
+      const { data: p } = await supabaseAdmin
+        .from('profiles')
+        .select('id, full_name, created_at')
+        .eq('id', data.seller_id)
+        .single();
+      profile = p || null;
+    }
 
     // Increment view count
     await supabaseAdmin
@@ -260,7 +305,7 @@ app.get('/listings/:id', async (req, res) => {
       .update({ views_count: (data.views_count || 0) + 1 })
       .eq('id', req.params.id);
 
-    return res.json(data);
+    return res.json({ ...data, profiles: profile });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: 'Server error' });
@@ -275,17 +320,23 @@ app.post('/listings', requireAuth, upload.array('photos', 6), async (req, res) =
     // Upload photos to Supabase Storage
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        const fileName = `${req.user.id}/${Date.now()}_${file.originalname}`;
+        const safeName = (file.originalname || 'photo').replace(/[^a-zA-Z0-9._-]/g, '_');
+        const fileName = `${req.user.id}/${Date.now()}_${safeName}`;
         const { error: uploadErr } = await supabaseAdmin.storage
-          .from('listing-photos')
-          .upload(fileName, file.buffer, { contentType: file.mimetype });
+          .from(LISTING_BUCKET)
+          .upload(fileName, file.buffer, {
+            contentType: file.mimetype || 'image/jpeg',
+            upsert: false,
+          });
 
-        if (!uploadErr) {
-          const { data: urlData } = supabaseAdmin.storage
-            .from('listing-photos')
-            .getPublicUrl(fileName);
-          photoUrls.push(urlData.publicUrl);
+        if (uploadErr) {
+          console.error('Photo upload failed:', uploadErr.message);
+          continue;
         }
+        const { data: urlData } = supabaseAdmin.storage
+          .from(LISTING_BUCKET)
+          .getPublicUrl(fileName);
+        if (urlData?.publicUrl) photoUrls.push(urlData.publicUrl);
       }
     }
 
@@ -350,16 +401,22 @@ app.put('/listings/:id', requireAuth, upload.array('photos', 6), async (req, res
 
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        const fileName = `${req.user.id}/${Date.now()}_${file.originalname}`;
+        const safeName = (file.originalname || 'photo').replace(/[^a-zA-Z0-9._-]/g, '_');
+        const fileName = `${req.user.id}/${Date.now()}_${safeName}`;
         const { error: uploadErr } = await supabaseAdmin.storage
-          .from('listing-photos')
-          .upload(fileName, file.buffer, { contentType: file.mimetype });
-        if (!uploadErr) {
-          const { data: urlData } = supabaseAdmin.storage
-            .from('listing-photos')
-            .getPublicUrl(fileName);
-          photoUrls.push(urlData.publicUrl);
+          .from(LISTING_BUCKET)
+          .upload(fileName, file.buffer, {
+            contentType: file.mimetype || 'image/jpeg',
+            upsert: false,
+          });
+        if (uploadErr) {
+          console.error('Photo upload failed:', uploadErr.message);
+          continue;
         }
+        const { data: urlData } = supabaseAdmin.storage
+          .from(LISTING_BUCKET)
+          .getPublicUrl(fileName);
+        if (urlData?.publicUrl) photoUrls.push(urlData.publicUrl);
       }
     }
 
@@ -471,20 +528,31 @@ app.get('/my-listings', requireAuth, async (req, res) => {
 
 app.get('/favorites', requireAuth, async (req, res) => {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data: favData, error } = await supabaseAdmin
       .from('favorites')
-      .select(`
-        id, created_at,
-        listing:listing_id (
-          *,
-          profiles:seller_id ( full_name, avatar_url )
-        )
-      `)
+      .select('id, created_at, listing_id')
       .eq('user_id', req.user.id)
       .order('created_at', { ascending: false });
 
     if (error) return res.status(400).json({ message: error.message });
-    return res.json({ favorites: data || [] });
+
+    const listingIds = [...new Set((favData || []).map(f => f.listing_id).filter(Boolean))];
+    let listingMap = {};
+    if (listingIds.length) {
+      const { data: listings } = await supabaseAdmin
+        .from('listings')
+        .select('*')
+        .in('id', listingIds);
+      (listings || []).forEach(l => { listingMap[l.id] = l; });
+    }
+
+    const favorites = (favData || []).map(f => ({
+      id: f.id,
+      created_at: f.created_at,
+      listing: listingMap[f.listing_id] || null,
+    }));
+
+    return res.json({ favorites });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: 'Server error' });
@@ -539,22 +607,38 @@ app.delete('/favorites/:listingId', requireAuth, async (req, res) => {
 
 app.get('/conversations', requireAuth, async (req, res) => {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data: convData, error } = await supabaseAdmin
       .from('conversations')
-      .select(`
-        *,
-        listing:listing_id ( id, title, photos, price, is_free, is_adoption ),
-        buyer:buyer_id ( id, full_name:profiles(full_name), avatar_url:profiles(avatar_url) ),
-        seller:seller_id ( id, full_name:profiles(full_name), avatar_url:profiles(avatar_url) )
-      `)
+      .select('*')
       .or(`buyer_id.eq.${req.user.id},seller_id.eq.${req.user.id}`)
       .order('created_at', { ascending: false });
 
     if (error) return res.status(400).json({ message: error.message });
 
-    // Attach last message to each conversation
+    // Collect IDs for batch lookups
+    const userIds = [...new Set([
+      ...(convData || []).map(c => c.buyer_id),
+      ...(convData || []).map(c => c.seller_id),
+    ].filter(Boolean))];
+
+    const listingIds = [...new Set((convData || []).map(c => c.listing_id).filter(Boolean))];
+
+    // Batch fetch profiles and listings
+    let profileMap = {}, listingMap = {};
+    if (userIds.length) {
+      const { data: profiles } = await supabaseAdmin
+        .from('profiles').select('id, full_name').in('id', userIds);
+      (profiles || []).forEach(p => { profileMap[p.id] = p; });
+    }
+    if (listingIds.length) {
+      const { data: listings } = await supabaseAdmin
+        .from('listings').select('id, title, photos, price, is_free, is_adoption').in('id', listingIds);
+      (listings || []).forEach(l => { listingMap[l.id] = l; });
+    }
+
+    // Attach last message + unread count to each conversation
     const withLastMessage = await Promise.all(
-      (data || []).map(async (conv) => {
+      (convData || []).map(async (conv) => {
         const { data: msgs } = await supabaseAdmin
           .from('messages')
           .select('body, created_at, sender_id, is_read')
@@ -569,7 +653,14 @@ app.get('/conversations', requireAuth, async (req, res) => {
           .eq('is_read', false)
           .neq('sender_id', req.user.id);
 
-        return { ...conv, lastMessage: msgs?.[0] || null, unreadCount: unread || 0 };
+        return {
+          ...conv,
+          listing: listingMap[conv.listing_id] || null,
+          buyer: profileMap[conv.buyer_id] ? { id: conv.buyer_id, full_name: profileMap[conv.buyer_id].full_name } : null,
+          seller: profileMap[conv.seller_id] ? { id: conv.seller_id, full_name: profileMap[conv.seller_id].full_name } : null,
+          lastMessage: msgs?.[0] || null,
+          unreadCount: unread || 0,
+        };
       }),
     );
 

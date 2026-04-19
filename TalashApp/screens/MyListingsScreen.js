@@ -23,7 +23,7 @@ const TABS = ['active', 'draft', 'sold'];
 function formatPrice(l) {
   if (l.is_free) return 'Free';
   if (l.is_adoption) return 'Adoption';
-  if (l.price) return `$${Number(l.price).toLocaleString()}`;
+  if (l.price) return `PKR ${Number(l.price).toLocaleString('en-PK')}`;
   return 'POA';
 }
 

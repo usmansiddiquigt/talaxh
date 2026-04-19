@@ -43,7 +43,7 @@ const CARDS = [
     location: 'Brooklyn, NY',
     tag: 'FOR SALE',
     title: 'Modern 3BR House',
-    sub: '$450,000 · Brooklyn',
+    sub: 'PKR 450,000 · Brooklyn',
     image:
       'https://lh3.googleusercontent.com/aida-public/AB6AXuBTIzF6ZjbpHrTPAXclu_rQ9dEufbvan1Fq9YlpWrL4xrPjahRZyUEPcT70soURyBr2Ae6Kbgf4oykziNw4nYEsP-ijQvUZ6zh5HMrVUir2is2noayKIcjCua5Y5rV__0ZPchpFssv1cYt4IyJf_95w3bzPQ96G98AXcDQ2xTSTRA2Z_tJbcHAr6VFB6AXUzbxOIn1lOuxCu1AJhlnEQRpsGhvQjzp4uwTAg_F6UgK_ROmc-Efx4t_V2Rqq6yBxFcGtzOq2AAWSbcg',
   },

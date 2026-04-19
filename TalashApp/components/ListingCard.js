@@ -15,7 +15,7 @@ function formatPrice(listing) {
   if (listing.is_free) return 'Free';
   if (listing.is_adoption) return 'Adoption';
   if (listing.is_swap) return 'Swap';
-  if (listing.price) return `$${Number(listing.price).toLocaleString()}`;
+  if (listing.price) return `PKR ${Number(listing.price).toLocaleString('en-PK')}`;
   return 'POA';
 }
 
