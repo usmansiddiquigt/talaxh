@@ -201,6 +201,19 @@ app.get('/profile/:userId', async (req, res) => {
   }
 });
 
+app.post('/me/heartbeat', requireAuth, async (req, res) => {
+  try {
+    await supabaseAdmin
+      .from('profiles')
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq('id', req.user.id);
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('heartbeat error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
 app.put('/profile', requireAuth, async (req, res) => {
   const { fullName, phone, location, bio, avatarUrl } = req.body;
   try {
@@ -293,10 +306,27 @@ app.get('/listings/:id', async (req, res) => {
     if (data.seller_id) {
       const { data: p } = await supabaseAdmin
         .from('profiles')
-        .select('id, full_name, created_at')
+        .select('id, full_name, phone, created_at, last_seen_at, is_email_verified, is_phone_verified')
         .eq('id', data.seller_id)
         .single();
-      profile = p || null;
+      profile = p || { id: data.seller_id };
+
+      // Backfill from auth.users if profile is missing fields
+      if (!profile.created_at || !profile.full_name) {
+        try {
+          const { data: au } = await supabaseAdmin.auth.admin.getUserById(data.seller_id);
+          const u = au?.user;
+          if (u) {
+            if (!profile.created_at) profile.created_at = u.created_at;
+            if (!profile.full_name) {
+              profile.full_name =
+                u.user_metadata?.full_name ||
+                (u.email || '').split('@')[0] ||
+                'Seller';
+            }
+          }
+        } catch { /* ignore */ }
+      }
     }
 
     // Increment view count

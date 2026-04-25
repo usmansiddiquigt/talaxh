@@ -3,6 +3,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Dimensions,
   FlatList,
   Modal,
   RefreshControl,
@@ -13,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import EmptyState from '../components/EmptyState';
 import ListingCard from '../components/ListingCard';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -21,6 +24,17 @@ import { useAuth } from '../context/AuthContext';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const PRIMARY = '#2C097F';
+const { width: SCREEN_W } = Dimensions.get('window');
+const DRAWER_W = Math.min(300, SCREEN_W * 0.78);
+
+const MENU_ITEMS = [
+  { icon: 'home',                label: 'Home',           screen: null        },
+  { icon: 'post-add',            label: 'Post a Listing', screen: 'PostListing' },
+  { icon: 'list-alt',            label: 'My Listings',    screen: 'MyListings'  },
+  { icon: 'favorite-border',     label: 'Saved Pets',     screen: 'Favorites'   },
+  { icon: 'chat-bubble-outline', label: 'Messages',       screen: 'Messages'    },
+  { icon: 'person-outline',      label: 'Account',        screen: 'Account'     },
+];
 
 const CATEGORIES = [
   { key: 'all',        label: 'All Pets'   },
@@ -33,7 +47,7 @@ const CATEGORIES = [
   { key: 'small-pets', label: 'Small Pets' },
 ];
 
-export default function HomeScreen({ navigation }) {
+export default function HomeScreen({ navigation, route }) {
   const { token } = useAuth();
 
   const [listings, setListings]           = useState([]);
@@ -45,6 +59,40 @@ export default function HomeScreen({ navigation }) {
   const [filterVisible, setFilterVisible] = useState(false);
   const [filters, setFilters]             = useState({});
   const [total, setTotal]                 = useState(0);
+
+  // Drawer
+  const [drawerOpen, setDrawerOpen]       = useState(false);
+  const drawerAnim                        = useRef(new Animated.Value(-DRAWER_W)).current;
+  const overlayAnim                       = useRef(new Animated.Value(0)).current;
+
+  const openDrawer = () => {
+    setDrawerOpen(true);
+    Animated.parallel([
+      Animated.timing(drawerAnim,  { toValue: 0, duration: 260, useNativeDriver: true }),
+      Animated.timing(overlayAnim, { toValue: 1, duration: 260, useNativeDriver: true }),
+    ]).start();
+  };
+  const closeDrawer = () => {
+    Animated.parallel([
+      Animated.timing(drawerAnim,  { toValue: -DRAWER_W, duration: 220, useNativeDriver: true }),
+      Animated.timing(overlayAnim, { toValue: 0,         duration: 220, useNativeDriver: true }),
+    ]).start(() => setDrawerOpen(false));
+  };
+  const handleMenuNav = (screen) => {
+    closeDrawer();
+    if (!screen) return;
+    setTimeout(() => navigation.navigate(screen), 240);
+  };
+
+  // Apply incoming route params (e.g. View All from PetDetail)
+  useEffect(() => {
+    const p = route?.params;
+    if (!p) return;
+    if (p.category) setActiveCategory(p.category);
+    if (p.breed)    setSearch(p.breed);
+    else if (p.search) setSearch(p.search);
+    navigation.setParams({ category: undefined, breed: undefined, search: undefined });
+  }, [route?.params?.category, route?.params?.breed, route?.params?.search]);
 
   // Debounce: only hit API 400ms after user stops typing
   const searchTimer = useRef(null);
@@ -145,15 +193,17 @@ export default function HomeScreen({ navigation }) {
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.appName}>Talash</Text>
-            <Text style={styles.tagline}>Find your perfect pet</Text>
-          </View>
+          <TouchableOpacity style={styles.headerIconBtn} onPress={openDrawer}>
+            <MaterialIcons name="menu" size={24} color="#fff" />
+          </TouchableOpacity>
+
+          <Text style={styles.appName}>Talash</Text>
+
           <TouchableOpacity
-            style={styles.profileBtn}
+            style={styles.headerIconBtn}
             onPress={() => navigation.navigate('Account')}
           >
-            <MaterialIcons name="person-outline" size={22} color="#0d121b" />
+            <MaterialIcons name="person-outline" size={22} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -175,15 +225,91 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             )}
           </View>
-          <TouchableOpacity
-            style={[styles.filterBtn, hasFilters && styles.filterBtnActive]}
-            onPress={() => setFilterVisible(true)}
-          >
-            <MaterialIcons name="tune" size={22} color="#fff" />
-            {hasFilters && <View style={styles.filterDot} />}
-          </TouchableOpacity>
+          {activeCategory !== 'all' && (
+            <TouchableOpacity
+              style={[styles.filterBtn, hasFilters && styles.filterBtnActive]}
+              onPress={() => setFilterVisible(true)}
+            >
+              <MaterialIcons name="tune" size={22} color={PRIMARY} />
+              {hasFilters && <View style={styles.filterDot} />}
+            </TouchableOpacity>
+          )}
         </View>
       </View>
+
+      {/* ── Side drawer ── */}
+      {drawerOpen && (
+        <>
+          <Animated.View
+            style={[styles.drawerOverlay, { opacity: overlayAnim }]}
+            pointerEvents={drawerOpen ? 'auto' : 'none'}
+          >
+            <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeDrawer} />
+          </Animated.View>
+
+          <Animated.View
+            style={[styles.drawer, { transform: [{ translateX: drawerAnim }] }]}
+          >
+            <View style={styles.drawerHeader}>
+              <View style={styles.drawerAvatar}>
+                <MaterialIcons name="pets" size={26} color="#fff" />
+              </View>
+              <Text style={styles.drawerTitle}>Talash</Text>
+              <Text style={styles.drawerSub}>Find your perfect pet</Text>
+            </View>
+
+            <View style={styles.drawerList}>
+              {MENU_ITEMS.map(item => (
+                <TouchableOpacity
+                  key={item.label}
+                  style={styles.drawerItem}
+                  onPress={() => handleMenuNav(item.screen)}
+                >
+                  <MaterialIcons name={item.icon} size={22} color={PRIMARY} />
+                  <Text style={styles.drawerItemText}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Animated.View>
+        </>
+      )}
+
+      {/* ── Hero banner (only on "All Pets") ── */}
+      {activeCategory === 'all' && (
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate('PostListing')}
+          style={styles.bannerWrap}
+        >
+          <LinearGradient
+            colors={['#2C097F', '#5B21B6', '#7C3AED']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.banner}
+          >
+            <View style={styles.bannerPaw1}>
+              <MaterialIcons name="pets" size={22} color="rgba(255,255,255,0.15)" />
+            </View>
+            <View style={styles.bannerPaw2}>
+              <MaterialIcons name="pets" size={16} color="rgba(255,255,255,0.18)" />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={styles.bannerEyebrow}>WELCOME TO TALASH</Text>
+              <Text style={styles.bannerTitle}>Find Your Perfect{'\n'}Companion</Text>
+              <Text style={styles.bannerSub}>Thousands of loving pets waiting for a home</Text>
+              <View style={styles.bannerCta}>
+                <Text style={styles.bannerCtaText}>Post a Listing</Text>
+                <MaterialIcons name="arrow-forward" size={14} color={PRIMARY} />
+              </View>
+            </View>
+
+            <View style={styles.bannerIconWrap}>
+              <MaterialIcons name="pets" size={96} color="rgba(255,255,255,0.22)" />
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
 
       {/* ── Category chips ── */}
       <View style={styles.categoriesWrap}>
@@ -389,12 +515,10 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: PRIMARY,
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
   },
   headerTop: {
     flexDirection: 'row',
@@ -402,16 +526,126 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 14,
   },
-  appName:   { fontSize: 22, fontWeight: '900', color: PRIMARY },
-  tagline:   { fontSize: 12, color: '#94a3b8', marginTop: 1 },
-  profileBtn: {
+  appName: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: 0.5,
+  },
+  headerIconBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#f6f6f8',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  // Drawer
+  drawerOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    zIndex: 20,
+  },
+  drawer: {
+    position: 'absolute',
+    top: 0, bottom: 0, left: 0,
+    width: DRAWER_W,
+    backgroundColor: '#fff',
+    zIndex: 30,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    shadowOffset: { width: 2, height: 0 },
+    elevation: 10,
+  },
+  drawerHeader: {
+    backgroundColor: PRIMARY,
+    paddingHorizontal: 20,
+    paddingTop: 48,
+    paddingBottom: 20,
+  },
+  drawerAvatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  drawerTitle: { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: 0.5 },
+  drawerSub:   { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  drawerList:  { paddingTop: 8 },
+  drawerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  drawerItemText: { fontSize: 15, fontWeight: '600', color: '#0d121b' },
+
+  // Hero banner
+  bannerWrap: {
+    marginHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 4,
+    borderRadius: 18,
+    shadowColor: '#2C097F',
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 5,
+  },
+  banner: {
+    borderRadius: 18,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  bannerEyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.4,
+    color: 'rgba(255,255,255,0.75)',
+    marginBottom: 6,
+  },
+  bannerTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#fff',
+    lineHeight: 24,
+  },
+  bannerSub: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  bannerCta: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
+  bannerCtaText: { color: PRIMARY, fontWeight: '800', fontSize: 12 },
+  bannerIconWrap: {
+    position: 'absolute',
+    right: -8,
+    bottom: -12,
+    transform: [{ rotate: '-12deg' }],
+  },
+  bannerPaw1: { position: 'absolute', top: 14, right: 24 },
+  bannerPaw2: { position: 'absolute', top: 50, right: 80 },
 
   // Search
   searchRow: { flexDirection: 'row', gap: 10 },
@@ -419,7 +653,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f6f6f8',
+    backgroundColor: '#fff',
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 46,
@@ -430,7 +664,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 12,
-    backgroundColor: PRIMARY,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
   },

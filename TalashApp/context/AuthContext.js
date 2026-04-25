@@ -1,9 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 
 const AuthContext = createContext(null);
 
 const STORAGE_KEY = '@talash_auth';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const HEARTBEAT_INTERVAL_MS = 60_000;
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -26,6 +29,27 @@ export function AuthProvider({ children }) {
       }
     })();
   }, []);
+
+  // Presence: ping /me/heartbeat on sign-in, when app foregrounds, and every 60s
+  const heartbeatTimer = useRef(null);
+  useEffect(() => {
+    if (!token) return;
+    const beat = async () => {
+      try {
+        await fetch(`${API_URL}/me/heartbeat`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch { /* ignore */ }
+    };
+    beat();
+    heartbeatTimer.current = setInterval(beat, HEARTBEAT_INTERVAL_MS);
+    const sub = AppState.addEventListener('change', s => { if (s === 'active') beat(); });
+    return () => {
+      clearInterval(heartbeatTimer.current);
+      sub.remove();
+    };
+  }, [token]);
 
   const signIn = async (userData, accessToken) => {
     setUser(userData);

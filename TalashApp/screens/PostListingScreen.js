@@ -34,13 +34,13 @@ const CATEGORIES = [
 
 // ── Pet type labels per category ──────────────────────────────────────────────
 const PET_TYPES = {
-  dogs:        ['Puppy',         'Adult Dog'],
-  cats:        ['Kitten',        'Adult Cat'],
-  birds:       ['Chick/Juvenile','Adult Bird'],
-  fish:        ['Juvenile',      'Adult Fish'],
-  rabbits:     ['Baby/Kit',      'Adult Rabbit'],
-  reptiles:    ['Juvenile',      'Adult Reptile'],
-  'small-pets':['Baby',          'Adult'],
+  dogs:        ['Puppy',  'Adult'],
+  cats:        ['Kitten', 'Adult'],
+  birds:       ['Young',  'Adult'],
+  fish:        ['Young',  'Adult'],
+  rabbits:     ['Young',  'Adult'],
+  reptiles:    ['Young',  'Adult'],
+  'small-pets':['Young',  'Adult'],
 };
 
 // ── Health checkboxes ─────────────────────────────────────────────────────────
@@ -238,14 +238,14 @@ export default function PostListingScreen({ navigation, route }) {
 
       // ── Step 2: Pet Details ─────────────────────────────────────────────────
       case 2: {
-        const petTypes = PET_TYPES[form.category] || ['Puppy', 'Adult'];
+        const petTypes = PET_TYPES[form.category] || ['Young', 'Adult'];
         return (
           <View style={styles.stepWrap}>
             <Text style={styles.stepTitle}>Pet Details</Text>
             <Text style={styles.stepSub}>Tell buyers about your pet</Text>
 
-            {/* Pet type: Puppy / Adult */}
-            <FieldLabel label="Is it a puppy or adult?" />
+            {/* Pet type toggle */}
+            <FieldLabel label={`Is it a ${petTypes[0].toLowerCase()} or ${petTypes[1].toLowerCase()}?`} />
             <View style={styles.toggleRow}>
               {petTypes.map(pt => (
                 <TouchableOpacity
