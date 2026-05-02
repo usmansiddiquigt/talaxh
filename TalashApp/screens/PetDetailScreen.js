@@ -42,7 +42,7 @@ function formatPrice(listing) {
 function memberSince(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
-  In;
+  return `Member since ${d.toLocaleString('default', { month: 'long', year: 'numeric' })}`;
 }
 
 function timeAgo(dateStr) {
@@ -176,7 +176,8 @@ export default function PetDetailScreen({ navigation, route }) {
   };
 
   const handleCall = async () => {
-    const phone = listing?.contact_phone || listing?.profiles?.phone;
+    const phone = (listing?.contact_phone || listing?.profiles?.phone || '').trim();
+    console.log('[handleCall] listing.profiles =', listing?.profiles, 'resolved phone =', phone);
     if (!phone) {
       Alert.alert(
         'No phone number',
@@ -212,6 +213,7 @@ export default function PetDetailScreen({ navigation, route }) {
   if (!listing) return null;
 
   const seller = listing.profiles;
+  const sellerPhone = (listing.contact_phone || seller?.phone || '').trim();
   const price = formatPrice(listing);
   const priceColor =
     listing.is_free || listing.is_adoption ? '#10b981' : PRIMARY;
@@ -570,10 +572,15 @@ export default function PetDetailScreen({ navigation, route }) {
 
       {/* Bottom CTA */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.callBtn} onPress={handleCall}>
-          <MaterialIcons name='phone' size={20} color={PRIMARY} />
-          <Text style={styles.callBtnText}>Call</Text>
-        </TouchableOpacity>
+        {sellerPhone ? (
+          <TouchableOpacity style={styles.callBtn} onPress={handleCall}>
+            <MaterialIcons name='phone' size={20} color={PRIMARY} />
+            <View style={{ alignItems: 'flex-start' }}>
+              <Text style={styles.callBtnText}>Call</Text>
+              <Text style={styles.callBtnPhone} numberOfLines={1}>{sellerPhone}</Text>
+            </View>
+          </TouchableOpacity>
+        ) : null}
         <TouchableOpacity style={styles.messageBtn} onPress={handleMessage}>
           <MaterialIcons name='chat-bubble-outline' size={20} color='#fff' />
           <Text style={styles.messageBtnText}>Message Seller</Text>
@@ -797,7 +804,8 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 14,
   },
-  callBtnText: { color: PRIMARY, fontSize: 16, fontWeight: '800' },
+  callBtnText: { color: PRIMARY, fontSize: 14, fontWeight: '800', lineHeight: 16 },
+  callBtnPhone: { color: PRIMARY, fontSize: 11, fontWeight: '700', opacity: 0.8 },
   messageBtn: {
     flex: 1.4,
     flexDirection: 'row',

@@ -346,12 +346,16 @@ app.post('/listings', requireAuth, upload.array('photos', 6), async (req, res) =
   try {
     const body = req.body;
     const photoUrls = [];
+    const uploadErrors = [];
+
+    console.log(`[POST /listings] user=${req.user.id} files=${req.files?.length || 0}`);
 
     // Upload photos to Supabase Storage
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         const safeName = (file.originalname || 'photo').replace(/[^a-zA-Z0-9._-]/g, '_');
         const fileName = `${req.user.id}/${Date.now()}_${safeName}`;
+        console.log(`  → uploading ${fileName} (${file.size} bytes, ${file.mimetype})`);
         const { error: uploadErr } = await supabaseAdmin.storage
           .from(LISTING_BUCKET)
           .upload(fileName, file.buffer, {
@@ -360,13 +364,20 @@ app.post('/listings', requireAuth, upload.array('photos', 6), async (req, res) =
           });
 
         if (uploadErr) {
-          console.error('Photo upload failed:', uploadErr.message);
+          console.error(`  ✗ Photo upload failed (${fileName}):`, uploadErr.message);
+          uploadErrors.push(uploadErr.message);
           continue;
         }
         const { data: urlData } = supabaseAdmin.storage
           .from(LISTING_BUCKET)
           .getPublicUrl(fileName);
-        if (urlData?.publicUrl) photoUrls.push(urlData.publicUrl);
+        if (urlData?.publicUrl) {
+          console.log(`  ✓ uploaded → ${urlData.publicUrl}`);
+          photoUrls.push(urlData.publicUrl);
+        } else {
+          console.error(`  ✗ no publicUrl returned for ${fileName}`);
+          uploadErrors.push(`no publicUrl for ${fileName}`);
+        }
       }
     }
 
@@ -407,9 +418,14 @@ app.post('/listings', requireAuth, upload.array('photos', 6), async (req, res) =
       .single();
 
     if (error) return res.status(400).json({ message: error.message });
-    return res.status(201).json({ message: 'Listing created ✅', listing: data });
+    console.log(`[POST /listings] inserted ${data.id} with ${photoUrls.length} photo(s)`);
+    return res.status(201).json({
+      message: 'Listing created ✅',
+      listing: data,
+      uploadErrors: uploadErrors.length ? uploadErrors : undefined,
+    });
   } catch (err) {
-    console.error(err);
+    console.error('[POST /listings] error:', err);
     return res.status(500).json({ message: 'Server error' });
   }
 });
