@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "Talash",
+    "slug": "talashapp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.usmansiddiquigt.talash"
+    },
+    "android": {
+      "package": "com.usmansiddiquigt.talash",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "INTERNET",
+        "READ_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-web-browser"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "7533fca3-66ca-41f7-83fd-a9c154ac371b"
+      }
+    },
+    "owner": "usman13579"
+  }
+}

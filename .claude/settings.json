@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"http://localhost:5000/listings?limit=1\")",
+      "Bash(curl -s \"http://localhost:5000/listings?limit=3\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const j=JSON.parse\\(d\\); console.log\\('total:', j.total, '| first title:', j.listings?.[0]?.title, '| has photos:', j.listings?.[0]?.photos?.length > 0\\)\")"
+    ]
+  }
+}
