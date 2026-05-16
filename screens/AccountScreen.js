@@ -13,8 +13,8 @@ import {
   View,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import * as api from '../lib/api';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const PRIMARY = '#2C097F';
 
 const MENU_ITEMS = [
@@ -48,18 +48,13 @@ export default function AccountScreen({ navigation }) {
     });
   }, [user]);
 
-  // Refresh user info (incl. email) from server on mount so cached
-  // logins from before email was returned still pick it up.
+  // Refresh user info (incl. email) on mount so cached state stays fresh.
   useEffect(() => {
     if (!token) return;
     (async () => {
       try {
-        const res = await fetch(`${API_URL}/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data?.user) await updateUser(data.user);
+        const me = await api.fetchMe();
+        if (me) await updateUser(me);
       } catch { /* ignore */ }
     })();
   }, [token]);
@@ -68,18 +63,16 @@ export default function AccountScreen({ navigation }) {
     if (!token) return;
     setSaving(true);
     try {
-      const res = await fetch(`${API_URL}/profile`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ fullName: form.fullName, phone: form.phone, location: form.location }),
+      await api.updateProfile({
+        fullName: form.fullName,
+        phone: form.phone,
+        location: form.location,
       });
-      const data = await res.json();
-      if (!res.ok) { Alert.alert('Error', data.message); return; }
       await updateUser({ fullName: form.fullName, phone: form.phone, location: form.location });
       setEditing(false);
       Alert.alert('Saved', 'Profile updated successfully');
-    } catch {
-      Alert.alert('Error', 'Could not save changes');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Could not save changes');
     } finally {
       setSaving(false);
     }

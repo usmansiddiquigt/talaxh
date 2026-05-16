@@ -12,8 +12,7 @@ import {
   View,
 } from 'react-native';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
-//const API_URL = process.env.EXPORT_API_URL; // <-- your PC IP (same as signup)
+import * as api from '../lib/api';
 
 export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -25,32 +24,10 @@ export default function ForgotPasswordScreen({ navigation }) {
     }
 
     try {
-      const res = await fetch(`${API_URL}/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.message || 'Failed to send reset link');
-        return;
-      }
-
-      // Demo: show token (in production you email it)
-      if (data.resetToken) {
-        alert(`Reset link sent (demo) ✅\nToken: ${data.resetToken}`);
-      } else {
-        alert(
-          data.message || 'If the email exists, a reset link has been sent.',
-        );
-      }
-
-      // Optional: go back to login
-      // navigation.navigate("Login");
+      await api.sendPasswordReset(email.trim());
+      alert('If the email exists, a reset link has been sent.');
     } catch (err) {
-      alert('Network error: ' + err.message);
+      alert(err.message || 'Failed to send reset link');
     }
   };
 

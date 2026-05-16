@@ -17,8 +17,8 @@ import Badge from '../components/Badge';
 import ImageCarousel from '../components/ImageCarousel';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
+import * as api from '../lib/api';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const PRIMARY = '#2C097F';
 const AMBER = '#F4A724';
 
@@ -89,10 +89,7 @@ export default function PetDetailScreen({ navigation, route }) {
     if (!listing?.category) return;
     (async () => {
       try {
-        const res = await fetch(
-          `${API_URL}/listings?category=${listing.category}&limit=10`,
-        );
-        const data = await res.json();
+        const data = await api.fetchListings({ category: listing.category, limit: 10 });
         setSimilar(
           (data.listings || []).filter((l) => l.id !== listing.id).slice(0, 8),
         );
@@ -110,8 +107,7 @@ export default function PetDetailScreen({ navigation, route }) {
 
   const fetchListing = async () => {
     try {
-      const res = await fetch(`${API_URL}/listings/${listingId}`);
-      const data = await res.json();
+      const data = await api.fetchListingById(listingId);
       setListing(data);
     } catch {
       Alert.alert('Error', 'Could not load listing');
@@ -122,11 +118,8 @@ export default function PetDetailScreen({ navigation, route }) {
 
   const checkFavorite = async () => {
     try {
-      const res = await fetch(`${API_URL}/favorites`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      const ids = new Set((data.favorites || []).map((f) => f.listing?.id));
+      const favs = await api.fetchFavorites();
+      const ids = new Set((favs || []).map((f) => f.listing?.id));
       setIsFavorited(ids.has(listingId));
     } catch {
       /* ignore */
@@ -140,10 +133,7 @@ export default function PetDetailScreen({ navigation, route }) {
     }
     setIsFavorited((p) => !p);
     try {
-      await fetch(`${API_URL}/favorites/${listingId}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.toggleFavorite(listingId);
     } catch {
       setIsFavorited((p) => !p);
     }
@@ -161,24 +151,13 @@ export default function PetDetailScreen({ navigation, route }) {
     const text =
       typeof override === 'string' && override.trim() ? override.trim() : null;
     try {
-      const res = await fetch(`${API_URL}/conversations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          listingId,
-          ...(text ? { initialMessage: text } : {}),
-        }),
-      });
-      const data = await res.json();
+      const conv = await api.getOrCreateConversation(listingId, text);
       navigation.navigate('Conversation', {
-        conversationId: data.conversation.id,
+        conversationId: conv.id,
         listing,
       });
-    } catch {
-      Alert.alert('Error', 'Could not start conversation');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Could not start conversation');
     }
   };
 

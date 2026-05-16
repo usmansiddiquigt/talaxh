@@ -14,8 +14,7 @@ import {
 } from 'react-native';
 
 import { useAuth } from '../context/AuthContext';
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+import * as api from '../lib/api';
 
 export default function LoginScreen({ navigation }) {
   const { signIn } = useAuth();
@@ -29,24 +28,12 @@ export default function LoginScreen({ navigation }) {
     }
 
     try {
-      const res = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.message || 'Login failed');
-        return;
-      }
-
-      await signIn(data.user, data.access_token);
+      const { user } = await api.login({ email: email.trim(), password });
+      await signIn(user);
       navigation.replace('Main');
       setPassword('');
     } catch (err) {
-      alert('Network error: ' + err.message);
+      alert(err.message || 'Login failed');
     }
   };
 

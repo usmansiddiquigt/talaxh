@@ -13,8 +13,7 @@ import {
   View,
 } from 'react-native';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
-//const API_URL = process.env.EXPORT_API_URL; // <-- your PC IP (same as signup)
+import * as api from '../lib/api';
 
 export default function SignupScreen({ navigation }) {
   const [fullName, setFullName] = useState('');
@@ -37,29 +36,11 @@ export default function SignupScreen({ navigation }) {
 
   const onSignup = async () => {
     try {
-      const res = await fetch(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName,
-          email,
-          phone,
-          password,
-          confirmPassword,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.message || 'Signup failed');
-        return;
-      }
-
-      alert('Signup successful ✅');
+      await api.register({ fullName, email: email.trim(), phone, password, confirmPassword });
+      alert('Signup successful ✅ Please check your email if confirmation is required.');
       navigation.navigate('Login');
     } catch (err) {
-      alert('Network error: ' + err.message);
+      alert(err.message || 'Signup failed');
     }
   };
 

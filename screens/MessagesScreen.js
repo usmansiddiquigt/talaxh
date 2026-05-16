@@ -13,8 +13,8 @@ import {
 import EmptyState from '../components/EmptyState';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
+import * as api from '../lib/api';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const PRIMARY = '#2C097F';
 
 function timeAgo(d) {
@@ -55,11 +55,8 @@ export default function MessagesScreen({ navigation, route }) {
     if (!token) { setLoading(false); return; }
     if (!silent) setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/conversations`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      setConversations(data.conversations || []);
+      const list = await api.fetchConversations();
+      setConversations(list || []);
     } catch {
       setConversations([]);
     } finally {

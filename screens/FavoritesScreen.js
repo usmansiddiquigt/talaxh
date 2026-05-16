@@ -13,8 +13,8 @@ import EmptyState from '../components/EmptyState';
 import ListingCard from '../components/ListingCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
+import * as api from '../lib/api';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const PRIMARY = '#2C097F';
 
 export default function FavoritesScreen({ navigation, route }) {
@@ -47,11 +47,8 @@ export default function FavoritesScreen({ navigation, route }) {
     if (!token) { setLoading(false); return; }
     if (!silent) setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/favorites`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      setFavorites(data.favorites || []);
+      const favs = await api.fetchFavorites();
+      setFavorites(favs || []);
     } catch {
       setFavorites([]);
     } finally {
@@ -66,10 +63,7 @@ export default function FavoritesScreen({ navigation, route }) {
   const removeFavorite = async (listingId) => {
     setFavorites(prev => prev.filter(f => f.listing?.id !== listingId));
     try {
-      await fetch(`${API_URL}/favorites/${listingId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.removeFavorite(listingId);
     } catch { fetchFavorites(true); }
   };
 

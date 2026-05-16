@@ -13,8 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import EmptyState from '../components/EmptyState';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
+import * as api from '../lib/api';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const PRIMARY = '#2C097F';
 
 const TYPE_META = {
@@ -54,11 +54,8 @@ export default function NotificationsScreen({ navigation }) {
     if (!token) return;
     if (!silent) setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/notifications`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      setItems(data.notifications || []);
+      const list = await api.fetchNotifications();
+      setItems(list || []);
     } catch { setItems([]); }
     finally { setLoading(false); setRefreshing(false); }
   }, [token]);
@@ -68,12 +65,7 @@ export default function NotificationsScreen({ navigation }) {
   const handleTap = async (item) => {
     // Mark as read
     if (!item.is_read) {
-      try {
-        await fetch(`${API_URL}/notifications/${item.id}/read`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } catch { /* ignore */ }
+      try { await api.markNotificationRead(item.id); } catch { /* ignore */ }
       setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_read: true } : i));
     }
     // Navigate based on type
@@ -87,10 +79,7 @@ export default function NotificationsScreen({ navigation }) {
 
   const markAllRead = async () => {
     try {
-      await fetch(`${API_URL}/notifications/read-all`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.markAllNotificationsRead();
       setItems(prev => prev.map(i => ({ ...i, is_read: true })));
     } catch { /* ignore */ }
   };

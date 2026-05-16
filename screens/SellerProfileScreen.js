@@ -13,8 +13,8 @@ import Badge from '../components/Badge';
 import ListingCard from '../components/ListingCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
+import * as api from '../lib/api';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const PRIMARY = '#2C097F';
 
 function memberSince(d) {
@@ -30,8 +30,7 @@ export default function SellerProfileScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_URL}/profile/${sellerId}`)
-      .then(r => r.json())
+    api.fetchSellerProfile(sellerId)
       .then(d => {
         setProfile(d.profile);
         setListings(d.listings || []);

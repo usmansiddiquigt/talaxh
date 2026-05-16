@@ -15,8 +15,8 @@ import Badge from '../components/Badge';
 import EmptyState from '../components/EmptyState';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
+import * as api from '../lib/api';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const PRIMARY = '#2C097F';
 const TABS = ['active', 'draft', 'sold'];
 
@@ -46,11 +46,8 @@ export default function MyListingsScreen({ navigation }) {
     if (!token) return;
     if (!silent) setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/my-listings?status=${activeTab}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      setListings(data.listings || []);
+      const data = await api.fetchMyListings(activeTab);
+      setListings(data || []);
     } catch {
       setListings([]);
     } finally {
@@ -70,10 +67,7 @@ export default function MyListingsScreen({ navigation }) {
         style: 'destructive',
         onPress: async () => {
           try {
-            await fetch(`${API_URL}/listings/${id}`, {
-              method: 'DELETE',
-              headers: { Authorization: `Bearer ${token}` },
-            });
+            await api.deleteListing(id);
             setListings(prev => prev.filter(l => l.id !== id));
           } catch {
             Alert.alert('Error', 'Could not delete listing');
@@ -85,11 +79,7 @@ export default function MyListingsScreen({ navigation }) {
 
   const handleMarkSold = async (id) => {
     try {
-      await fetch(`${API_URL}/listings/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: 'sold' }),
-      });
+      await api.setListingStatus(id, 'sold');
       setListings(prev => prev.filter(l => l.id !== id));
     } catch {
       Alert.alert('Error', 'Could not update listing');

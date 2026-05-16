@@ -22,8 +22,8 @@ import ListingCard from '../components/ListingCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PetCategoryChip from '../components/PetCategoryChip';
 import { useAuth } from '../context/AuthContext';
+import * as api from '../lib/api';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const PRIMARY = '#2C097F';
 const { width: SCREEN_W } = Dimensions.get('window');
 const DRAWER_W = Math.min(300, SCREEN_W * 0.78);
@@ -131,17 +131,16 @@ export default function HomeScreen({ navigation, route }) {
   const fetchListings = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const params = new URLSearchParams({ limit: '60' });
-      if (activeCategory !== 'all') params.set('category', activeCategory);
-      if (apiSearch)        params.set('search',   apiSearch);
-      if (filters.minPrice) params.set('minPrice', filters.minPrice);
-      if (filters.maxPrice) params.set('maxPrice', filters.maxPrice);
-      if (filters.sort)     params.set('sort',     filters.sort);
-
-      const res  = await fetch(`${API_URL}/listings?${params}`);
-      const data = await res.json();
+      const data = await api.fetchListings({
+        limit: 60,
+        category: activeCategory !== 'all' ? activeCategory : undefined,
+        search:   apiSearch || undefined,
+        minPrice: filters.minPrice,
+        maxPrice: filters.maxPrice,
+        sort:     filters.sort,
+      });
       setListings(data.listings || []);
-      setTotal(data.total   || 0);
+      setTotal(data.total || 0);
     } catch {
       setListings([]);
       setTotal(0);
@@ -155,11 +154,8 @@ export default function HomeScreen({ navigation, route }) {
   const fetchUnreadNotif = useCallback(async () => {
     if (!token) { setUnreadNotif(0); return; }
     try {
-      const res  = await fetch(`${API_URL}/notifications/unread-count`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      setUnreadNotif(data?.count || 0);
+      const count = await api.fetchUnreadNotificationCount();
+      setUnreadNotif(count || 0);
     } catch { /* ignore */ }
   }, [token]);
 
@@ -167,13 +163,8 @@ export default function HomeScreen({ navigation, route }) {
   const fetchFavorites = useCallback(async () => {
     if (!token) return;
     try {
-      const res  = await fetch(`${API_URL}/favorites`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      const ids  = new Set(
-        (data.favorites || []).map(f => f.listing?.id).filter(Boolean)
-      );
+      const favs = await api.fetchFavorites();
+      const ids = new Set((favs || []).map(f => f.listing?.id).filter(Boolean));
       setFavorites(ids);
     } catch { /* ignore */ }
   }, [token]);
@@ -217,12 +208,9 @@ export default function HomeScreen({ navigation, route }) {
       return next;
     });
     try {
-      await fetch(`${API_URL}/favorites/${listingId}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.toggleFavorite(listingId);
     } catch { fetchFavorites(); }
-  }, [token]);
+  }, [token, fetchFavorites]);
 
   // ── Render card ───────────────────────────────────────────────────────────
   const renderItem = useCallback(({ item, index }) => (

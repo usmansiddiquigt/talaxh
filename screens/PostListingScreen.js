@@ -16,8 +16,8 @@ import {
 } from 'react-native';
 import StepProgressBar from '../components/StepProgressBar';
 import { useAuth } from '../context/AuthContext';
+import * as api from '../lib/api';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const PRIMARY = '#2C097F';
 const TOTAL_STEPS = 8;
 
@@ -149,53 +149,56 @@ export default function PostListingScreen({ navigation, route }) {
     if (!token) { navigation.navigate('Login'); return; }
     setSubmitting(true);
     try {
-      // Convert age to months
       const ageMonths = form.age_value
         ? form.age_unit === 'weeks'
           ? Math.round(Number(form.age_value) / 4.33)
           : Number(form.age_value)
-        : '';
+        : null;
 
       const locationStr = [form.address, form.city, form.postcode]
         .filter(Boolean).join(', ');
 
-      const fd = new FormData();
-      fd.append('title',          form.title.trim() || `${form.pet_type || ''} ${form.breed || form.category} for Sale`.trim());
-      fd.append('category',       form.category);
-      fd.append('breed',          form.breed);
-      fd.append('age_months',     ageMonths.toString());
-      fd.append('gender',         form.gender);
-      fd.append('color',          form.color);
-      fd.append('is_vaccinated',  form.is_vaccinated.toString());
-      fd.append('is_microchipped',form.is_microchipped.toString());
-      fd.append('is_neutered',    form.is_neutered.toString());
-      fd.append('is_kc_registered',form.is_kc_registered.toString());
-      fd.append('is_vet_checked', form.is_vet_checked.toString());
-      fd.append('price',          form.price || '0');
-      fd.append('is_free',        'false');
-      fd.append('is_adoption',    'false');
-      fd.append('is_swap',        'false');
-      fd.append('description',    form.description);
-      fd.append('city',           form.city);
-      fd.append('location',       locationStr);
-      fd.append('status',         isDraft ? 'draft' : 'active');
+      const fields = {
+        title: form.title.trim() || `${form.pet_type || ''} ${form.breed || form.category} for Sale`.trim(),
+        category: form.category,
+        breed: form.breed,
+        age_months: ageMonths,
+        gender: form.gender,
+        color: form.color,
+        is_vaccinated:    form.is_vaccinated,
+        is_microchipped:  form.is_microchipped,
+        is_neutered:      form.is_neutered,
+        is_kc_registered: form.is_kc_registered,
+        is_vet_checked:   form.is_vet_checked,
+        price: form.price || null,
+        is_free: false,
+        is_adoption: false,
+        is_swap: false,
+        description: form.description,
+        city: form.city,
+        location: locationStr,
+        status: isDraft ? 'draft' : 'active',
+      };
 
-      form.photos.forEach((uri, i) => {
-        const ext = uri.split('.').pop().toLowerCase();
-        fd.append('photos', {
+      // Map local file URIs into upload-ready descriptors. Already-uploaded
+      // URLs (http/https, e.g. from an edit) get preserved as-is.
+      const photoFiles = (form.photos || []).map((uri, i) => {
+        if (/^https?:\/\//.test(uri)) return uri;
+        const ext = (uri.split('.').pop() || 'jpg').toLowerCase();
+        return {
           uri,
           name: `photo_${i}.${ext}`,
           type: `image/${ext === 'jpg' ? 'jpeg' : ext}`,
-        });
+        };
       });
 
-      const url    = editListing ? `${API_URL}/listings/${editListing.id}` : `${API_URL}/listings`;
-      const method = editListing ? 'PUT' : 'POST';
-
-      const res  = await fetch(url, { method, headers: { Authorization: `Bearer ${token}` }, body: fd });
-      const data = await res.json();
-
-      if (!res.ok) { Alert.alert('Error', data.message); return; }
+      if (editListing) {
+        // Separate new local files vs. already-uploaded URLs so we don't re-upload.
+        const newFiles = photoFiles.filter((p) => typeof p !== 'string');
+        await api.updateListing(editListing.id, fields, newFiles);
+      } else {
+        await api.createListing(fields, photoFiles);
+      }
 
       Alert.alert(
         isDraft ? 'Draft Saved' : '🎉 Listing Published!',

@@ -13,13 +13,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../context/AuthContext';
+import * as api from '../lib/api';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const PRIMARY = '#2C097F';
 
 export default function ChangePasswordScreen({ navigation }) {
-  const { token } = useAuth();
   const [currentPassword, setCurrent] = useState('');
   const [newPassword, setNewPwd]      = useState('');
   const [confirmPassword, setConfirm] = useState('');
@@ -43,18 +41,12 @@ export default function ChangePasswordScreen({ navigation }) {
     setError('');
     setSaving(true);
     try {
-      const res = await fetch(`${API_URL}/auth/change-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.message || 'Could not change password'); return; }
+      await api.changePassword({ currentPassword, newPassword, confirmPassword });
       Alert.alert('Success', 'Your password has been updated.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
-    } catch {
-      setError('Network error. Please try again.');
+    } catch (err) {
+      setError(err.message || 'Could not change password');
     } finally {
       setSaving(false);
     }

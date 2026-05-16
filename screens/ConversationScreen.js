@@ -14,8 +14,8 @@ import {
 } from 'react-native';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
+import * as api from '../lib/api';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const PRIMARY = '#2C097F';
 
 function formatTime(d) {
@@ -44,11 +44,8 @@ export default function ConversationScreen({ navigation, route }) {
   const fetchMessages = async (silent = false) => {
     if (!token) return;
     try {
-      const res = await fetch(`${API_URL}/conversations/${conversationId}/messages`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      setMessages(data.messages || []);
+      const list = await api.fetchMessages(conversationId);
+      setMessages(list || []);
     } catch { /* ignore */ }
     finally { if (!silent) setLoading(false); }
   };
@@ -69,20 +66,10 @@ export default function ConversationScreen({ navigation, route }) {
     setMessages(prev => [...prev, tempMsg]);
 
     try {
-      const res = await fetch(`${API_URL}/conversations/${conversationId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ body }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setMessages(prev =>
-          prev.map(m => (m.id === tempMsg.id ? data.message : m))
-        );
-      }
+      const saved = await api.sendMessage(conversationId, body);
+      setMessages(prev =>
+        prev.map(m => (m.id === tempMsg.id ? saved : m))
+      );
     } catch { /* keep temp message */ }
     finally { setSending(false); }
   };
