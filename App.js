@@ -4,10 +4,12 @@ enableScreens();
 
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoadingSpinner from './components/LoadingSpinner';
+import { useAndroidImmersive } from './hooks/useAndroidImmersive';
 
 // Auth screens
 import LoginScreen from './screens/LoginScreen';
@@ -82,8 +84,10 @@ function RootNavigator() {
 }
 
 export default function App() {
+  useAndroidImmersive();
   return (
     <SafeAreaProvider>
+      <StatusBar hidden />
       <AuthProvider>
         <NavigationContainer>
           <RootNavigator />

@@ -201,8 +201,10 @@ export default function PostListingScreen({ navigation, route }) {
       }
 
       Alert.alert(
-        isDraft ? 'Draft Saved' : '🎉 Listing Published!',
-        isDraft ? 'Your draft has been saved.' : 'Your listing is now live on the Home feed.',
+        isDraft ? 'Draft Saved' : 'Submitted for review',
+        isDraft
+          ? 'Your draft has been saved.'
+          : 'Your listing has been submitted and will appear on the Home feed once an admin approves it. You can track its status under My Listings.',
         [{ text: 'OK', onPress: () => navigation.replace('Main') }],
       );
     } catch (err) {

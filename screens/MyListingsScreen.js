@@ -119,6 +119,20 @@ export default function MyListingsScreen({ navigation }) {
               style={{ marginTop: 4 }}
             />
           )}
+          {item.moderation_status === 'pending' && (
+            <View style={styles.modBadgePending}>
+              <MaterialIcons name="hourglass-empty" size={12} color="#92400e" />
+              <Text style={styles.modBadgePendingText}>Pending review</Text>
+            </View>
+          )}
+          {item.moderation_status === 'rejected' && (
+            <View style={styles.modBadgeRejected}>
+              <MaterialIcons name="block" size={12} color="#991b1b" />
+              <Text style={styles.modBadgeRejectedText}>
+                Rejected{item.rejection_reason ? `: ${item.rejection_reason}` : ''}
+              </Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
 
@@ -283,4 +297,25 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   actionText: { fontSize: 12, fontWeight: '600' },
+
+  modBadgePending: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    paddingHorizontal: 8, paddingVertical: 3,
+    backgroundColor: '#fef3c7',
+    borderRadius: 6,
+  },
+  modBadgePendingText: { fontSize: 11, fontWeight: '700', color: '#92400e' },
+
+  modBadgeRejected: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    paddingHorizontal: 8, paddingVertical: 3,
+    backgroundColor: '#fee2e2',
+    borderRadius: 6,
+    maxWidth: '100%',
+  },
+  modBadgeRejectedText: { fontSize: 11, fontWeight: '700', color: '#991b1b', flexShrink: 1 },
 });

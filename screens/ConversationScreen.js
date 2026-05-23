@@ -99,7 +99,24 @@ export default function ConversationScreen({ navigation, route }) {
             </Text>
           </View>
         </View>
-        {isMe && !String(item.id).startsWith('temp_') && (
+        {isMe && !String(item.id).startsWith('temp_') && item.moderation_status === 'under_review' && (
+          <View style={styles.statusRow}>
+            <MaterialIcons name="hourglass-empty" size={12} color="#92400e" />
+            <Text style={[styles.statusText, { color: '#92400e' }]}>
+              Pending review — only you can see this until an admin approves it.
+            </Text>
+          </View>
+        )}
+        {isMe && !String(item.id).startsWith('temp_') && item.moderation_status === 'rejected' && (
+          <View style={styles.statusRow}>
+            <MaterialIcons name="block" size={12} color="#991b1b" />
+            <Text style={[styles.statusText, { color: '#991b1b' }]}>
+              Blocked by moderation
+              {item.rejection_reason ? `: ${item.rejection_reason}` : ''}
+            </Text>
+          </View>
+        )}
+        {isMe && !String(item.id).startsWith('temp_') && (!item.moderation_status || item.moderation_status === 'approved') && (
           <View style={styles.statusRow}>
             <MaterialIcons
               name={item.delivered_at || item.read_at ? 'done-all' : 'done'}

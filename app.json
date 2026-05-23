@@ -18,6 +18,15 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.usmansiddiquigt.talash"
     },
+    "androidStatusBar": {
+      "hidden": true,
+      "translucent": true,
+      "barStyle": "light-content"
+    },
+    "androidNavigationBar": {
+      "visible": "sticky-immersive",
+      "barStyle": "light-content"
+    },
     "android": {
       "package": "com.usmansiddiquigt.talash",
       "versionCode": 1,
