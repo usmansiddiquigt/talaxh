@@ -1,0 +1,1132 @@
+{
+  "info": {
+    "name": "TalashApp – Supabase API",
+    "description": "All HTTP endpoints the TalashApp mobile app and admin portal use against Supabase. There is no custom backend — the React Native client and the React admin portal both talk directly to Supabase's Auth, PostgREST, Storage and RPC endpoints.\n\n## Setup\n\n1. Import this collection + the matching `TalashApp.postman_environment.json` environment.\n2. Pick the environment in the top-right dropdown.\n3. Run **Auth → Sign In** — the test script auto-stores `access_token` and `user_id` into the environment.\n4. All subsequent requests use `{{access_token}}` for `Authorization` and `{{anon_key}}` for the required `apikey` header.\n\nReplace `{{supabase_url}}` and `{{anon_key}}` with your own project if you fork. The included environment is wired to the project in `.env`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "supabase_url", "value": "https://mokjsuqjlqyvggkowziv.supabase.co", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Wraps the Supabase Auth API (/auth/v1).",
+      "item": [
+        {
+          "name": "Sign Up (Register)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"strong-password-12+\",\n  \"data\": {\n    \"full_name\": \"New User\",\n    \"phone\": \"+92 300 0000000\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/auth/v1/signup",
+              "host": ["{{supabase_url}}"],
+              "path": ["auth", "v1", "signup"]
+            },
+            "description": "Calls Supabase Auth `signUp`. The DB trigger `handle_new_user` auto-creates the matching `profiles` row from `data.full_name` and `data.phone`. Body returns the user + session (and access/refresh tokens if email confirmations are disabled)."
+          }
+        },
+        {
+          "name": "Sign In (Login)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.access_token)  pm.environment.set('access_token',  json.access_token);",
+                  "if (json.refresh_token) pm.environment.set('refresh_token', json.refresh_token);",
+                  "if (json.user?.id)      pm.environment.set('user_id',       json.user.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"strong-password-12+\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/auth/v1/token?grant_type=password",
+              "host": ["{{supabase_url}}"],
+              "path": ["auth", "v1", "token"],
+              "query": [{ "key": "grant_type", "value": "password" }]
+            },
+            "description": "Email + password sign-in. The test script auto-stores `access_token`, `refresh_token`, and `user_id` into the environment so every other request authorises automatically."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.access_token)  pm.environment.set('access_token',  json.access_token);",
+                  "if (json.refresh_token) pm.environment.set('refresh_token', json.refresh_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/auth/v1/token?grant_type=refresh_token",
+              "host": ["{{supabase_url}}"],
+              "path": ["auth", "v1", "token"],
+              "query": [{ "key": "grant_type", "value": "refresh_token" }]
+            },
+            "description": "Exchange the refresh token for a new access token. The mobile app's Supabase client does this automatically every ~50 minutes."
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/auth/v1/user",
+              "host": ["{{supabase_url}}"],
+              "path": ["auth", "v1", "user"]
+            },
+            "description": "Returns the `auth.users` row for the bearer token. Used by `fetchMe()` in `lib/api.js`."
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"email\": \"newuser@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/auth/v1/recover?redirect_to=talaxh%3A%2F%2Freset-password",
+              "host": ["{{supabase_url}}"],
+              "path": ["auth", "v1", "recover"],
+              "query": [{ "key": "redirect_to", "value": "talaxh%3A%2F%2Freset-password" }]
+            },
+            "description": "Triggers a password-reset email. The `redirect_to` value must match an entry in Supabase Dashboard → Auth → URL Configuration."
+          }
+        },
+        {
+          "name": "Update Password (signed-in user)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"password\": \"new-strong-password-12+\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/auth/v1/user",
+              "host": ["{{supabase_url}}"],
+              "path": ["auth", "v1", "user"]
+            },
+            "description": "Updates the signed-in user's password. The mobile app calls this from `changePassword()` after verifying the current one."
+          }
+        },
+        {
+          "name": "Sign Out",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/auth/v1/logout",
+              "host": ["{{supabase_url}}"],
+              "path": ["auth", "v1", "logout"]
+            },
+            "description": "Revokes the current refresh token. The access token still works until expiry (~1 hour) unless you also clear it client-side."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profiles",
+      "description": "Reads and writes against the `public.profiles` table via PostgREST. RLS rules: anyone can SELECT; owners can UPDATE their own row; admins can UPDATE anyone.",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/profiles?id=eq.{{user_id}}&select=*",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "profiles"],
+              "query": [
+                { "key": "id",     "value": "eq.{{user_id}}" },
+                { "key": "select", "value": "*" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Profile By ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/profiles?id=eq.SOME-UUID&select=id,full_name,phone,avatar_url,location,is_email_verified,is_phone_verified,created_at,last_seen_at",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "profiles"],
+              "query": [
+                { "key": "id",     "value": "eq.SOME-UUID" },
+                { "key": "select", "value": "id,full_name,phone,avatar_url,location,is_email_verified,is_phone_verified,created_at,last_seen_at" }
+              ]
+            },
+            "description": "Used by the Seller Profile screen."
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Prefer",       "value": "return=representation" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"full_name\": \"Updated Name\",\n  \"phone\": \"+92 300 0000001\",\n  \"location\": \"Karachi\",\n  \"bio\": \"Pet lover.\",\n  \"updated_at\": \"2026-06-06T00:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/profiles?id=eq.{{user_id}}",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "profiles"],
+              "query": [{ "key": "id", "value": "eq.{{user_id}}" }]
+            }
+          }
+        },
+        {
+          "name": "Heartbeat (update last_seen_at)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"last_seen_at\": \"2026-06-06T00:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/profiles?id=eq.{{user_id}}",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "profiles"],
+              "query": [{ "key": "id", "value": "eq.{{user_id}}" }]
+            },
+            "description": "The mobile app calls this every 60 seconds while in the foreground (`useAndroidImmersive` AppState handler)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Listings",
+      "description": "All CRUD against `public.listings`. The public SELECT policy returns rows only when `moderation_status='approved'` OR the caller is the seller OR the caller is an admin.",
+      "item": [
+        {
+          "name": "List Approved Listings (Home feed)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "apikey", "value": "{{anon_key}}" },
+              { "key": "Range",  "value": "0-19", "description": "Pagination — first 20 rows." }
+            ],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/listings?select=*&status=eq.active&moderation_status=eq.approved&order=created_at.desc",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "listings"],
+              "query": [
+                { "key": "select",            "value": "*" },
+                { "key": "status",            "value": "eq.active" },
+                { "key": "moderation_status", "value": "eq.approved" },
+                { "key": "order",             "value": "created_at.desc" }
+              ]
+            },
+            "description": "Use the `Range` header for pagination, or `?limit=20&offset=0`. Filters used by Home: `category=eq.dogs`, `city=ilike.*karachi*`, `price=gte.1000&price=lte.10000`, `title=ilike.*labrador*`."
+          }
+        },
+        {
+          "name": "Get Listing By ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/listings?id=eq.SOME-UUID&select=*",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "listings"],
+              "query": [
+                { "key": "id",     "value": "eq.SOME-UUID" },
+                { "key": "select", "value": "*" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List My Listings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/listings?seller_id=eq.{{user_id}}&select=*&order=created_at.desc",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "listings"],
+              "query": [
+                { "key": "seller_id", "value": "eq.{{user_id}}" },
+                { "key": "select",    "value": "*" },
+                { "key": "order",     "value": "created_at.desc" }
+              ]
+            },
+            "description": "Sellers see all their own listings regardless of moderation_status. The mobile app filters by `status` (active/draft/sold) on the client."
+          }
+        },
+        {
+          "name": "Create Listing",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Prefer",       "value": "return=representation" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"seller_id\": \"{{user_id}}\",\n  \"title\": \"Labrador puppy for sale\",\n  \"category\": \"dogs\",\n  \"breed\": \"Labrador\",\n  \"age_months\": 4,\n  \"gender\": \"male\",\n  \"color\": \"Golden\",\n  \"price\": 25000,\n  \"is_free\": false,\n  \"is_adoption\": false,\n  \"is_swap\": false,\n  \"description\": \"Healthy, vaccinated.\",\n  \"location\": \"DHA, Karachi\",\n  \"city\": \"Karachi\",\n  \"is_vaccinated\": true,\n  \"photos\": [\"https://.../photo1.jpg\"],\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/listings",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "listings"]
+            },
+            "description": "RLS requires `seller_id = auth.uid()` AND the caller is not banned. New rows default to `moderation_status='pending'` — the trigger `notify_listing_pending` fires automatically."
+          }
+        },
+        {
+          "name": "Update Listing",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Prefer",       "value": "return=representation" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"title\": \"Updated title\",\n  \"price\": 30000,\n  \"updated_at\": \"2026-06-06T00:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/listings?id=eq.SOME-UUID",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "listings"],
+              "query": [{ "key": "id", "value": "eq.SOME-UUID" }]
+            }
+          }
+        },
+        {
+          "name": "Mark Listing Sold",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"status\": \"sold\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/listings?id=eq.SOME-UUID",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "listings"],
+              "query": [{ "key": "id", "value": "eq.SOME-UUID" }]
+            }
+          }
+        },
+        {
+          "name": "Delete Listing",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/listings?id=eq.SOME-UUID",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "listings"],
+              "query": [{ "key": "id", "value": "eq.SOME-UUID" }]
+            }
+          }
+        },
+        {
+          "name": "Increment Listing Views (RPC)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"p_listing_id\": \"SOME-UUID\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/rpc/increment_listing_views",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "rpc", "increment_listing_views"]
+            },
+            "description": "Called from the listing detail screen on every open. Defined in migration 005."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Favorites",
+      "description": "`public.favorites`. Users can only see/insert/delete their own rows.",
+      "item": [
+        {
+          "name": "List My Favorites",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/favorites?user_id=eq.{{user_id}}&select=id,created_at,listing_id&order=created_at.desc",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "favorites"],
+              "query": [
+                { "key": "user_id", "value": "eq.{{user_id}}" },
+                { "key": "select",  "value": "id,created_at,listing_id" },
+                { "key": "order",   "value": "created_at.desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Favorite",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Prefer",       "value": "return=representation" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"listing_id\": \"SOME-UUID\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/favorites",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "favorites"]
+            }
+          }
+        },
+        {
+          "name": "Remove Favorite",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/favorites?user_id=eq.{{user_id}}&listing_id=eq.SOME-UUID",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "favorites"],
+              "query": [
+                { "key": "user_id",    "value": "eq.{{user_id}}" },
+                { "key": "listing_id", "value": "eq.SOME-UUID" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Conversations & Messages",
+      "description": "`public.conversations` and `public.messages`. RLS: participants can SELECT messages; the BEFORE INSERT trigger sets `moderation_status` based on `blocked_keywords` matches; recipients only see `approved` messages.",
+      "item": [
+        {
+          "name": "List My Conversations",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/conversations?or=(buyer_id.eq.{{user_id}},seller_id.eq.{{user_id}})&select=*&order=created_at.desc",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "conversations"],
+              "query": [
+                { "key": "or",     "value": "(buyer_id.eq.{{user_id}},seller_id.eq.{{user_id}})" },
+                { "key": "select", "value": "*" },
+                { "key": "order",  "value": "created_at.desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Conversation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Prefer",       "value": "return=representation" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"listing_id\": \"SOME-UUID\",\n  \"buyer_id\": \"{{user_id}}\",\n  \"seller_id\": \"SELLER-UUID\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/conversations",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "conversations"]
+            }
+          }
+        },
+        {
+          "name": "List Messages In Conversation",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/messages?conversation_id=eq.SOME-UUID&select=*&order=created_at.asc",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "messages"],
+              "query": [
+                { "key": "conversation_id", "value": "eq.SOME-UUID" },
+                { "key": "select",          "value": "*" },
+                { "key": "order",           "value": "created_at.asc" }
+              ]
+            },
+            "description": "Senders see all their own messages (any moderation_status). Recipients only see `moderation_status='approved'`."
+          }
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Prefer",       "value": "return=representation" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"conversation_id\": \"SOME-UUID\",\n  \"sender_id\": \"{{user_id}}\",\n  \"body\": \"Is this still available?\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/messages",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "messages"]
+            },
+            "description": "BEFORE INSERT trigger scans the body. Match → moderation_status='under_review' and the recipient won't see it until an admin approves."
+          }
+        },
+        {
+          "name": "Mark Messages Delivered",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"delivered_at\": \"2026-06-06T00:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/messages?conversation_id=eq.SOME-UUID&sender_id=neq.{{user_id}}&delivered_at=is.null",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "messages"],
+              "query": [
+                { "key": "conversation_id", "value": "eq.SOME-UUID" },
+                { "key": "sender_id",       "value": "neq.{{user_id}}" },
+                { "key": "delivered_at",    "value": "is.null" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark Messages Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"is_read\": true,\n  \"read_at\": \"2026-06-06T00:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/messages?conversation_id=eq.SOME-UUID&sender_id=neq.{{user_id}}&read_at=is.null",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "messages"],
+              "query": [
+                { "key": "conversation_id", "value": "eq.SOME-UUID" },
+                { "key": "sender_id",       "value": "neq.{{user_id}}" },
+                { "key": "read_at",         "value": "is.null" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "description": "`public.notifications`. Users can only SELECT their own. Inserts are done by DB triggers — the client never POSTs here.",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/notifications?user_id=eq.{{user_id}}&select=*&order=created_at.desc&limit=100",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "notifications"],
+              "query": [
+                { "key": "user_id", "value": "eq.{{user_id}}" },
+                { "key": "select",  "value": "*" },
+                { "key": "order",   "value": "created_at.desc" },
+                { "key": "limit",   "value": "100" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "apikey", "value": "{{anon_key}}" },
+              { "key": "Prefer", "value": "count=exact" }
+            ],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/notifications?user_id=eq.{{user_id}}&is_read=eq.false&select=id",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "notifications"],
+              "query": [
+                { "key": "user_id", "value": "eq.{{user_id}}" },
+                { "key": "is_read", "value": "eq.false" },
+                { "key": "select",  "value": "id" }
+              ]
+            },
+            "description": "The count comes back in the `Content-Range` response header (e.g. `0-99/27` means 27 unread)."
+          }
+        },
+        {
+          "name": "Mark Notification Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"is_read\": true,\n  \"read_at\": \"2026-06-06T00:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/notifications?id=eq.SOME-UUID&user_id=eq.{{user_id}}",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "notifications"],
+              "query": [
+                { "key": "id",      "value": "eq.SOME-UUID" },
+                { "key": "user_id", "value": "eq.{{user_id}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark All Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"is_read\": true,\n  \"read_at\": \"2026-06-06T00:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/notifications?user_id=eq.{{user_id}}&is_read=eq.false",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "notifications"],
+              "query": [
+                { "key": "user_id", "value": "eq.{{user_id}}" },
+                { "key": "is_read", "value": "eq.false" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Storage – listing-photos",
+      "description": "Supabase Storage. Anyone can GET (the bucket is public); authenticated users can write into `${uid}/...`; admins can delete anything.",
+      "item": [
+        {
+          "name": "Upload Photo (binary)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "image/jpeg" },
+              { "key": "x-upsert",     "value": "false" }
+            ],
+            "body": {
+              "mode": "file",
+              "file": { "src": "/path/to/local/photo.jpg" }
+            },
+            "url": {
+              "raw": "{{supabase_url}}/storage/v1/object/listing-photos/{{user_id}}/UNIQUE-FILENAME.jpg",
+              "host": ["{{supabase_url}}"],
+              "path": ["storage", "v1", "object", "listing-photos", "{{user_id}}", "UNIQUE-FILENAME.jpg"]
+            },
+            "description": "Path MUST start with `{{user_id}}/` to satisfy the storage policy 'Listing photos: users upload to own folder'. Pick the body file in the Body tab → File → Select File."
+          }
+        },
+        {
+          "name": "Get Public URL (no auth needed)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{supabase_url}}/storage/v1/object/public/listing-photos/{{user_id}}/UNIQUE-FILENAME.jpg",
+              "host": ["{{supabase_url}}"],
+              "path": ["storage", "v1", "object", "public", "listing-photos", "{{user_id}}", "UNIQUE-FILENAME.jpg"]
+            },
+            "description": "Public CDN URL — the same one stored in `listings.photos`. No `apikey` or `Authorization` required."
+          }
+        },
+        {
+          "name": "Delete Photo",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/storage/v1/object/listing-photos/{{user_id}}/UNIQUE-FILENAME.jpg",
+              "host": ["{{supabase_url}}"],
+              "path": ["storage", "v1", "object", "listing-photos", "{{user_id}}", "UNIQUE-FILENAME.jpg"]
+            },
+            "description": "Allowed if the path is under your own folder, or you're an admin."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin – Listings Moderation",
+      "description": "Requires the bearer token to belong to a user with `profiles.is_admin = true`.",
+      "item": [
+        {
+          "name": "List Pending Listings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/listings?moderation_status=eq.pending&select=*&order=created_at.desc",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "listings"],
+              "query": [
+                { "key": "moderation_status", "value": "eq.pending" },
+                { "key": "select",            "value": "*" },
+                { "key": "order",             "value": "created_at.desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Listing",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"moderation_status\": \"approved\",\n  \"rejection_reason\": null,\n  \"reviewed_at\": \"2026-06-06T00:00:00Z\",\n  \"reviewed_by\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/listings?id=eq.SOME-UUID",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "listings"],
+              "query": [{ "key": "id", "value": "eq.SOME-UUID" }]
+            },
+            "description": "Triggers `notify_listing_moderation` which inserts a `listing_approved` notification for the seller."
+          }
+        },
+        {
+          "name": "Reject Listing",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"moderation_status\": \"rejected\",\n  \"rejection_reason\": \"Photos are too blurry.\",\n  \"reviewed_at\": \"2026-06-06T00:00:00Z\",\n  \"reviewed_by\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/listings?id=eq.SOME-UUID",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "listings"],
+              "query": [{ "key": "id", "value": "eq.SOME-UUID" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin – Messages Moderation",
+      "description": "Requires admin. Held messages live with `moderation_status='under_review'`.",
+      "item": [
+        {
+          "name": "List Held Messages",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/messages?moderation_status=eq.under_review&select=*&order=created_at.desc&limit=200",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "messages"],
+              "query": [
+                { "key": "moderation_status", "value": "eq.under_review" },
+                { "key": "select",            "value": "*" },
+                { "key": "order",             "value": "created_at.desc" },
+                { "key": "limit",             "value": "200" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Message",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"moderation_status\": \"approved\",\n  \"rejection_reason\": null,\n  \"reviewed_at\": \"2026-06-06T00:00:00Z\",\n  \"reviewed_by\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/messages?id=eq.SOME-UUID",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "messages"],
+              "query": [{ "key": "id", "value": "eq.SOME-UUID" }]
+            }
+          }
+        },
+        {
+          "name": "Reject Message",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"moderation_status\": \"rejected\",\n  \"rejection_reason\": \"Contains contact info.\",\n  \"reviewed_at\": \"2026-06-06T00:00:00Z\",\n  \"reviewed_by\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/messages?id=eq.SOME-UUID",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "messages"],
+              "query": [{ "key": "id", "value": "eq.SOME-UUID" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin – Blocked Keywords",
+      "description": "Requires admin. CRUD on `public.blocked_keywords`. Keywords are case-insensitive substring matches.",
+      "item": [
+        {
+          "name": "List Keywords",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/blocked_keywords?select=*&order=created_at.desc",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "blocked_keywords"],
+              "query": [
+                { "key": "select", "value": "*" },
+                { "key": "order",  "value": "created_at.desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Keyword",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Prefer",       "value": "return=representation" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"keyword\": \"telegram\",\n  \"category\": \"social\",\n  \"notes\": \"Social handle\",\n  \"created_by\": \"{{user_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/blocked_keywords",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "blocked_keywords"]
+            },
+            "description": "A BEFORE INSERT trigger lowercases and trims `keyword` before saving."
+          }
+        },
+        {
+          "name": "Update Keyword",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"category\": \"contact\",\n  \"notes\": \"Updated reason\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/blocked_keywords?id=eq.SOME-UUID",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "blocked_keywords"],
+              "query": [{ "key": "id", "value": "eq.SOME-UUID" }]
+            }
+          }
+        },
+        {
+          "name": "Delete Keyword",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/blocked_keywords?id=eq.SOME-UUID",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "blocked_keywords"],
+              "query": [{ "key": "id", "value": "eq.SOME-UUID" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin – Users",
+      "description": "Requires admin. The 'Admins can update any profile' policy allows write to anyone.",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/profiles?select=id,full_name,phone,location,is_admin,is_banned,banned_at,banned_reason,last_seen_at,created_at&order=created_at.desc&limit=200",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "profiles"],
+              "query": [
+                { "key": "select", "value": "id,full_name,phone,location,is_admin,is_banned,banned_at,banned_reason,last_seen_at,created_at" },
+                { "key": "order",  "value": "created_at.desc" },
+                { "key": "limit",  "value": "200" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ban User",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"is_banned\": true,\n  \"banned_at\": \"2026-06-06T00:00:00Z\",\n  \"banned_reason\": \"Spamming external contact info\"\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/profiles?id=eq.SOME-UUID",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "profiles"],
+              "query": [{ "key": "id", "value": "eq.SOME-UUID" }]
+            }
+          }
+        },
+        {
+          "name": "Unban User",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"is_banned\": false,\n  \"banned_at\": null,\n  \"banned_reason\": null\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/profiles?id=eq.SOME-UUID",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "profiles"],
+              "query": [{ "key": "id", "value": "eq.SOME-UUID" }]
+            }
+          }
+        },
+        {
+          "name": "Promote To Admin",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"is_admin\": true\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/profiles?id=eq.SOME-UUID",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "profiles"],
+              "query": [{ "key": "id", "value": "eq.SOME-UUID" }]
+            }
+          }
+        },
+        {
+          "name": "Demote Admin",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"is_admin\": false\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/profiles?id=eq.SOME-UUID",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "profiles"],
+              "query": [{ "key": "id", "value": "eq.SOME-UUID" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin – Activity Logs",
+      "description": "Read-only audit trail. The admin portal writes here automatically after every action.",
+      "item": [
+        {
+          "name": "List Activity Logs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "apikey", "value": "{{anon_key}}" }],
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/admin_activity_logs?select=*&order=created_at.desc&limit=200",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "admin_activity_logs"],
+              "query": [
+                { "key": "select", "value": "*" },
+                { "key": "order",  "value": "created_at.desc" },
+                { "key": "limit",  "value": "200" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Write Activity Log",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "apikey",       "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"admin_id\": \"{{user_id}}\",\n  \"action\": \"approve_listing\",\n  \"target_type\": \"listing\",\n  \"target_id\": \"SOME-UUID\",\n  \"metadata\": {}\n}"
+            },
+            "url": {
+              "raw": "{{supabase_url}}/rest/v1/admin_activity_logs",
+              "host": ["{{supabase_url}}"],
+              "path": ["rest", "v1", "admin_activity_logs"]
+            },
+            "description": "Action names used by the portal: `approve_listing`, `reject_listing`, `delete_listing`, `ban_user`, `unban_user`, `promote_admin`, `demote_admin`, `approve_message`, `reject_message`, `add_keyword`, `edit_keyword`, `remove_keyword`."
+          }
+        }
+      ]
+    }
+  ]
+}

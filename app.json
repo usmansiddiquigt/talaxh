@@ -23,13 +23,9 @@
       "translucent": true,
       "barStyle": "light-content"
     },
-    "androidNavigationBar": {
-      "visible": "sticky-immersive",
-      "barStyle": "light-content"
-    },
     "android": {
       "package": "com.usmansiddiquigt.talash",
-      "versionCode": 1,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundColor": "#ffffff"
@@ -44,7 +40,13 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "color": "#2C097F"
+        }
+      ]
     ],
     "extra": {
       "eas": {

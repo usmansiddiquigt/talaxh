@@ -5,11 +5,14 @@ enableScreens();
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoadingSpinner from './components/LoadingSpinner';
 import { useAndroidImmersive } from './hooks/useAndroidImmersive';
+import { navigationRef } from './lib/navigation';
+import { registerForPushNotifications, setupPushListeners } from './lib/push';
 
 // Auth screens
 import LoginScreen from './screens/LoginScreen';
@@ -42,6 +45,21 @@ import AppFeedbackScreen from './screens/AppFeedbackScreen';
 import CommunityGuidelinesScreen from './screens/CommunityGuidelinesScreen';
 
 const Stack = createNativeStackNavigator();
+
+function PushBootstrap() {
+  const { user } = useAuth();
+
+  // Register the device for pushes whenever a user signs in.
+  useEffect(() => {
+    if (!user?.id) return;
+    registerForPushNotifications();
+  }, [user?.id]);
+
+  // Listen for taps + foreground deliveries. Runs once for the app's lifetime.
+  useEffect(() => setupPushListeners(), []);
+
+  return null;
+}
 
 function RootNavigator() {
   const { loading } = useAuth();
@@ -89,7 +107,8 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar hidden />
       <AuthProvider>
-        <NavigationContainer>
+        <NavigationContainer ref={navigationRef}>
+          <PushBootstrap />
           <RootNavigator />
         </NavigationContainer>
       </AuthProvider>
