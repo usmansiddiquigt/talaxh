@@ -264,8 +264,9 @@ export default function PetDetailScreen({ navigation, route }) {
           <TouchableOpacity
             style={styles.actionBtn}
             onPress={() =>
+              // CategoryListing lives inside the Main tab navigator.
               navigation.navigate('Main', {
-                screen: 'Home',
+                screen: 'CategoryListing',
                 params: {
                   category: listing.category,
                   breed: listing.breed || undefined,
@@ -277,14 +278,6 @@ export default function PetDetailScreen({ navigation, route }) {
             <Text style={styles.actionText} numberOfLines={1}>
               View All {listing.breed || 'Breed'}
             </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionBtn}
-            onPress={() => navigation.navigate('PostListing')}
-          >
-            <MaterialIcons name='add' size={18} color={PRIMARY} />
-            <Text style={styles.actionText}>Post an Ad</Text>
           </TouchableOpacity>
         </View>
 

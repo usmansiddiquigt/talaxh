@@ -9,7 +9,6 @@ const ICONS = {
   rabbits:    'cruelty-free',
   fish:       'water',
   reptiles:   'bug-report',
-  'small-pets': 'favorite',
 };
 
 const PRIMARY = '#2C097F';

@@ -74,17 +74,18 @@ export default function Users() {
               <th className="text-left px-4 py-3">User</th>
               <th className="text-left px-4 py-3 hidden md:table-cell">Phone</th>
               <th className="text-left px-4 py-3 hidden md:table-cell">Joined</th>
-              <th className="text-left px-4 py-3 hidden lg:table-cell">Last seen</th>
+              <th className="text-left px-4 py-3 hidden lg:table-cell">Last login</th>
+              <th className="text-left px-4 py-3 hidden lg:table-cell">Last active</th>
               <th className="text-left px-4 py-3">Status</th>
               <th className="text-right px-4 py-3">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading && (
-              <tr><td colSpan={6} className="px-4 py-6 text-slate-500">Loading…</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-slate-500">Loading…</td></tr>
             )}
             {!loading && users.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-6 text-slate-500">No users.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-6 text-slate-500">No users.</td></tr>
             )}
             {users.map(u => {
               const isMe = u.id === me?.id;
@@ -96,6 +97,9 @@ export default function Users() {
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">{u.phone || '—'}</td>
                   <td className="px-4 py-3 hidden md:table-cell">{formatDateShort(u.created_at)}</td>
+                  <td className="px-4 py-3 hidden lg:table-cell text-slate-500">
+                    {u.last_sign_in_at ? timeAgo(u.last_sign_in_at) : '—'}
+                  </td>
                   <td className="px-4 py-3 hidden lg:table-cell text-slate-500">
                     {u.last_seen_at ? timeAgo(u.last_seen_at) : '—'}
                   </td>

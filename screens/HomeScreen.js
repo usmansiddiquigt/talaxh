@@ -5,8 +5,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   AppState,
-  Dimensions,
-  FlatList,
   Modal,
   RefreshControl,
   ScrollView,
@@ -17,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import AppDrawer from '../components/AppDrawer';
 import EmptyState from '../components/EmptyState';
 import ListingCard from '../components/ListingCard';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -25,27 +24,15 @@ import { useAuth } from '../context/AuthContext';
 import * as api from '../lib/api';
 
 const PRIMARY = '#2C097F';
-const { width: SCREEN_W } = Dimensions.get('window');
-const DRAWER_W = Math.min(300, SCREEN_W * 0.78);
-
-const MENU_ITEMS = [
-  { icon: 'home',                label: 'Home',           screen: null        },
-  { icon: 'post-add',            label: 'Post a Listing', screen: 'PostListing' },
-  { icon: 'list-alt',            label: 'My Listings',    screen: 'MyListings'  },
-  { icon: 'favorite-border',     label: 'Saved Pets',     screen: 'Favorites'   },
-  { icon: 'chat-bubble-outline', label: 'Messages',       screen: 'Messages'    },
-  { icon: 'person-outline',      label: 'Account',        screen: 'Account'     },
-];
 
 const CATEGORIES = [
-  { key: 'all',        label: 'All Pets'   },
-  { key: 'dogs',       label: 'Dogs'       },
-  { key: 'cats',       label: 'Cats'       },
-  { key: 'birds',      label: 'Birds'      },
-  { key: 'rabbits',    label: 'Rabbits'    },
-  { key: 'fish',       label: 'Fish'       },
-  { key: 'reptiles',   label: 'Reptiles'   },
-  { key: 'small-pets', label: 'Small Pets' },
+  { key: 'all',      label: 'All Pets' },
+  { key: 'dogs',     label: 'Dogs'     },
+  { key: 'cats',     label: 'Cats'     },
+  { key: 'birds',    label: 'Birds'    },
+  { key: 'rabbits',  label: 'Rabbits'  },
+  { key: 'fish',     label: 'Fish'     },
+  { key: 'reptiles', label: 'Reptiles' },
 ];
 
 export default function HomeScreen({ navigation, route }) {
@@ -55,7 +42,6 @@ export default function HomeScreen({ navigation, route }) {
   const [loading, setLoading]             = useState(true);
   const [refreshing, setRefreshing]       = useState(false);
   const [search, setSearch]               = useState('');
-  const [activeCategory, setActiveCategory] = useState('all');
   const [favorites, setFavorites]         = useState(new Set());
   const [filterVisible, setFilterVisible] = useState(false);
   const [filters, setFilters]             = useState({});
@@ -64,14 +50,12 @@ export default function HomeScreen({ navigation, route }) {
 
   // Drawer
   const [drawerOpen, setDrawerOpen]       = useState(false);
-  const drawerAnim                        = useRef(new Animated.Value(-DRAWER_W)).current;
-  const overlayAnim                       = useRef(new Animated.Value(0)).current;
 
   // Scroll-driven sticky header
   const scrollY                           = useRef(new Animated.Value(0)).current;
   const [bannerH, setBannerH]             = useState(180);
   const [filterH, setFilterH]             = useState(60);
-  const effectiveBannerH                  = activeCategory === 'all' ? bannerH : 0;
+  const effectiveBannerH                  = bannerH;
 
   const bannerTranslateY = scrollY.interpolate({
     inputRange:  [0, Math.max(1, bannerH)],
@@ -89,34 +73,31 @@ export default function HomeScreen({ navigation, route }) {
     extrapolate: 'clamp',
   });
 
-  const openDrawer = () => {
-    setDrawerOpen(true);
-    Animated.parallel([
-      Animated.timing(drawerAnim,  { toValue: 0, duration: 260, useNativeDriver: true }),
-      Animated.timing(overlayAnim, { toValue: 1, duration: 260, useNativeDriver: true }),
-    ]).start();
-  };
-  const closeDrawer = () => {
-    Animated.parallel([
-      Animated.timing(drawerAnim,  { toValue: -DRAWER_W, duration: 220, useNativeDriver: true }),
-      Animated.timing(overlayAnim, { toValue: 0,         duration: 220, useNativeDriver: true }),
-    ]).start(() => setDrawerOpen(false));
-  };
   const handleMenuNav = (screen) => {
-    closeDrawer();
-    if (!screen) return;
-    setTimeout(() => navigation.navigate(screen), 240);
+    // "Home" → we're already on the Home page; just reset it to defaults.
+    if (!screen) { resetHome(); return; }
+    navigation.navigate(screen);
   };
 
-  // Apply incoming route params (e.g. View All from PetDetail)
+  // Apply incoming route params. Category/breed deep links now open the
+  // dedicated CategoryListing page instead of filtering Home in place.
   useEffect(() => {
     const p = route?.params;
     if (!p) return;
-    if (p.category) setActiveCategory(p.category);
-    if (p.breed)    setSearch(p.breed);
-    else if (p.search) setSearch(p.search);
+    if (p.category && p.category !== 'all') {
+      navigation.navigate('CategoryListing', { category: p.category, breed: p.breed });
+    } else if (p.search) {
+      setSearch(p.search);
+    }
     navigation.setParams({ category: undefined, breed: undefined, search: undefined });
   }, [route?.params?.category, route?.params?.breed, route?.params?.search]);
+
+  // "Home" (drawer) and the Talash heading both bring the Home page back
+  // to its default state: all pets, no search, no filters.
+  const resetHome = useCallback(() => {
+    setSearch('');
+    setFilters({});
+  }, []);
 
   // Debounce: only hit API 400ms after user stops typing
   const searchTimer = useRef(null);
@@ -133,7 +114,6 @@ export default function HomeScreen({ navigation, route }) {
     try {
       const data = await api.fetchListings({
         limit: 60,
-        category: activeCategory !== 'all' ? activeCategory : undefined,
         search:   apiSearch || undefined,
         minPrice: filters.minPrice,
         maxPrice: filters.maxPrice,
@@ -148,7 +128,7 @@ export default function HomeScreen({ navigation, route }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [activeCategory, apiSearch, filters]);
+  }, [apiSearch, filters]);
 
   // ── Fetch unread notifications count ─────────────────────────────────────
   const fetchUnreadNotif = useCallback(async () => {
@@ -223,7 +203,7 @@ export default function HomeScreen({ navigation, route }) {
     />
   ), [favorites, toggleFavorite]);
 
-  const activeLabel = CATEGORIES.find(c => c.key === activeCategory)?.label ?? 'All Pets';
+  const activeLabel = 'All Pets';
   const hasFilters  = !!(filters.minPrice || filters.maxPrice || filters.sort);
 
   // ── UI ────────────────────────────────────────────────────────────────────
@@ -233,11 +213,14 @@ export default function HomeScreen({ navigation, route }) {
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.headerIconBtn} onPress={openDrawer}>
+          <TouchableOpacity style={styles.headerIconBtn} onPress={() => setDrawerOpen(true)}>
             <MaterialIcons name="menu" size={24} color="#fff" />
           </TouchableOpacity>
 
-          <Text style={styles.appName}>Talash</Text>
+          {/* Tapping the app name always returns Home to its default state */}
+          <TouchableOpacity onPress={resetHome} hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}>
+            <Text style={styles.appName}>Talash</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.headerIconBtn}
@@ -272,70 +255,37 @@ export default function HomeScreen({ navigation, route }) {
               </TouchableOpacity>
             )}
           </View>
-          {activeCategory !== 'all' && (
-            <TouchableOpacity
-              style={[styles.filterBtn, hasFilters && styles.filterBtnActive]}
-              onPress={() => setFilterVisible(true)}
-            >
-              <MaterialIcons name="tune" size={22} color={PRIMARY} />
-              {hasFilters && <View style={styles.filterDot} />}
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[styles.filterBtn, hasFilters && styles.filterBtnActive]}
+            onPress={() => setFilterVisible(true)}
+          >
+            <MaterialIcons name="tune" size={22} color={PRIMARY} />
+            {hasFilters && <View style={styles.filterDot} />}
+          </TouchableOpacity>
         </View>
       </View>
 
       {/* ── Side drawer ── */}
-      {drawerOpen && (
-        <>
-          <Animated.View
-            style={[styles.drawerOverlay, { opacity: overlayAnim }]}
-            pointerEvents={drawerOpen ? 'auto' : 'none'}
-          >
-            <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeDrawer} />
-          </Animated.View>
-
-          <Animated.View
-            style={[styles.drawer, { transform: [{ translateX: drawerAnim }] }]}
-          >
-            <View style={styles.drawerHeader}>
-              <View style={styles.drawerAvatar}>
-                <MaterialIcons name="pets" size={26} color="#fff" />
-              </View>
-              <Text style={styles.drawerTitle}>Talash</Text>
-              <Text style={styles.drawerSub}>Find your perfect pet</Text>
-            </View>
-
-            <View style={styles.drawerList}>
-              {MENU_ITEMS.map(item => (
-                <TouchableOpacity
-                  key={item.label}
-                  style={styles.drawerItem}
-                  onPress={() => handleMenuNav(item.screen)}
-                >
-                  <MaterialIcons name={item.icon} size={22} color={PRIMARY} />
-                  <Text style={styles.drawerItemText}>{item.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </Animated.View>
-        </>
-      )}
+      <AppDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onNavigate={handleMenuNav}
+      />
 
       {/* ── Scrollable area with absolute-positioned banner + sticky filter bar ── */}
       {loading ? (
         <LoadingSpinner />
       ) : (
         <View style={{ flex: 1, overflow: 'hidden' }}>
-          {/* Banner — absolute, scrolls up & fades out as you scroll. Only on "All Pets". */}
-          {activeCategory === 'all' && (
-            <Animated.View
-              pointerEvents="box-none"
-              onLayout={e => setBannerH(e.nativeEvent.layout.height)}
-              style={[
-                styles.bannerLayer,
-                { transform: [{ translateY: bannerTranslateY }], opacity: bannerOpacity },
-              ]}
-            >
+          {/* Banner — absolute, scrolls up & fades out as you scroll. */}
+          <Animated.View
+            pointerEvents="box-none"
+            onLayout={e => setBannerH(e.nativeEvent.layout.height)}
+            style={[
+              styles.bannerLayer,
+              { transform: [{ translateY: bannerTranslateY }], opacity: bannerOpacity },
+            ]}
+          >
               <TouchableOpacity
                 activeOpacity={0.9}
                 onPress={() => navigation.navigate('PostListing')}
@@ -369,8 +319,7 @@ export default function HomeScreen({ navigation, route }) {
                   </View>
                 </LinearGradient>
               </TouchableOpacity>
-            </Animated.View>
-          )}
+          </Animated.View>
 
           {/* Filter bar — absolute, slides up from below banner and locks at top. Always tappable. */}
           <Animated.View
@@ -392,8 +341,14 @@ export default function HomeScreen({ navigation, route }) {
                     key={cat.key}
                     category={cat.key}
                     label={cat.label}
-                    active={activeCategory === cat.key}
-                    onPress={() => setActiveCategory(cat.key)}
+                    active={cat.key === 'all'}
+                    onPress={() => {
+                      // Home shows all pets; a category chip opens that
+                      // category's dedicated listing page.
+                      if (cat.key !== 'all') {
+                        navigation.navigate('CategoryListing', { category: cat.key });
+                      }
+                    }}
                   />
                 ))}
               </ScrollView>
@@ -468,7 +423,6 @@ export default function HomeScreen({ navigation, route }) {
                 onCta={() => {
                   if (search || hasFilters) {
                     setSearch('');
-                    setActiveCategory('all');
                     setFilters({});
                   } else {
                     navigation.navigate('PostListing');
@@ -640,52 +594,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerBadgeText: { color: '#fff', fontSize: 10, fontWeight: '900' },
-
-  // Drawer
-  drawerOverlay: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    zIndex: 20,
-  },
-  drawer: {
-    position: 'absolute',
-    top: 0, bottom: 0, left: 0,
-    width: DRAWER_W,
-    backgroundColor: '#fff',
-    zIndex: 30,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 2, height: 0 },
-    elevation: 10,
-  },
-  drawerHeader: {
-    backgroundColor: PRIMARY,
-    paddingHorizontal: 20,
-    paddingTop: 48,
-    paddingBottom: 20,
-  },
-  drawerAvatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  drawerTitle: { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: 0.5 },
-  drawerSub:   { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
-  drawerList:  { paddingTop: 8 },
-  drawerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  drawerItemText: { fontSize: 15, fontWeight: '600', color: '#0d121b' },
 
   // Absolute-positioned overlay layers
   bannerLayer: {

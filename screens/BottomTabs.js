@@ -2,7 +2,9 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StyleSheet, View } from 'react-native';
 
+import { useUnread } from '../context/UnreadContext';
 import AccountScreen from './AccountScreen';
+import CategoryListingScreen from './CategoryListingScreen';
 import FavoritesScreen from './FavoritesScreen';
 import HomeScreen from './HomeScreen';
 import MessagesScreen from './MessagesScreen';
@@ -15,6 +17,8 @@ const INACTIVE = '#94a3b8';
 function PostPlaceholder() { return null; }
 
 export default function BottomTabs() {
+  const { unreadCount } = useUnread();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -41,6 +45,9 @@ export default function BottomTabs() {
         options={{
           tabBarLabel: 'Messages',
           tabBarIcon: ({ color }) => <MaterialIcons name='chat-bubble-outline' size={22} color={color} />,
+          // No badge at all when the count is 0.
+          tabBarBadge: unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : undefined,
+          tabBarBadgeStyle: styles.badge,
         }}
       />
 
@@ -83,6 +90,17 @@ export default function BottomTabs() {
           tabBarIcon: ({ color }) => <MaterialIcons name='person-outline' size={24} color={color} />,
         }}
       />
+
+      {/* Category listing pages live INSIDE the tab navigator so the bottom
+          tab bar stays visible on them — but they get no tab button. */}
+      <Tab.Screen
+        name='CategoryListing'
+        component={CategoryListingScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
+        }}
+      />
     </Tab.Navigator>
   );
 }
@@ -97,6 +115,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   label: { fontSize: 10, fontWeight: '700' },
+  badge: {
+    backgroundColor: '#ef4444',
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+    minWidth: 17,
+    height: 17,
+    lineHeight: 15,
+    borderRadius: 9,
+  },
   fabWrap: {
     width: 64,
     alignItems: 'center',

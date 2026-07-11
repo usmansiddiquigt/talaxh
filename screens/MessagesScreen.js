@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -13,6 +13,7 @@ import {
 import EmptyState from '../components/EmptyState';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
+import { useUnread } from '../context/UnreadContext';
 import * as api from '../lib/api';
 
 const PRIMARY = '#2C097F';
@@ -29,9 +30,25 @@ function timeAgo(d) {
 
 export default function MessagesScreen({ navigation, route }) {
   const { token, user } = useAuth();
+  const { refreshUnread } = useUnread();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState('all'); // 'all' | 'unread' | 'read'
+
+  // A conversation is "unread" while it has inbound messages not yet read.
+  // unreadCount comes from the DB (lib/api.js fetchConversations), so the
+  // state is persisted — reopening the tab can never revert a read chat.
+  const unreadConvCount = useMemo(
+    () => conversations.filter(c => (c.unreadCount || 0) > 0).length,
+    [conversations],
+  );
+  const readConvCount = conversations.length - unreadConvCount;
+  const filtered = useMemo(() => {
+    if (filter === 'unread') return conversations.filter(c => (c.unreadCount || 0) > 0);
+    if (filter === 'read')   return conversations.filter(c => !(c.unreadCount > 0));
+    return conversations;
+  }, [conversations, filter]);
 
   const handleBack = () => {
     const from = route?.params?.from;
@@ -66,6 +83,16 @@ export default function MessagesScreen({ navigation, route }) {
   }, [token]);
 
   useEffect(() => { fetchConversations(); }, [fetchConversations]);
+
+  // Refresh the list + tab badge every time this tab regains focus
+  // (e.g. coming back from a conversation where messages were read).
+  useEffect(() => {
+    return navigation.addListener('focus', () => {
+      fetchConversations(true);
+      refreshUnread();
+    });
+  }, [navigation, fetchConversations, refreshUnread]);
+
   const onRefresh = () => { setRefreshing(true); fetchConversations(true); };
 
   const renderItem = ({ item }) => {
@@ -160,24 +187,61 @@ export default function MessagesScreen({ navigation, route }) {
         <Text style={styles.headerTitle}>Messages</Text>
       </View>
 
+      {/* Filter tabs */}
+      <View style={styles.tabs}>
+        {[
+          { key: 'all',    label: 'All',    count: conversations.length },
+          { key: 'unread', label: 'Unread', count: unreadConvCount },
+          { key: 'read',   label: 'Read',   count: readConvCount },
+        ].map(t => {
+          const active = filter === t.key;
+          return (
+            <TouchableOpacity
+              key={t.key}
+              style={[styles.tab, active && styles.tabActive]}
+              onPress={() => setFilter(t.key)}
+            >
+              <Text style={[styles.tabText, active && styles.tabTextActive]}>
+                {t.label}
+                {t.count > 0 ? ` (${t.count})` : ''}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       {loading ? (
         <LoadingSpinner />
       ) : (
         <FlatList
-          data={conversations}
+          data={filtered}
           keyExtractor={item => item.id}
           renderItem={renderItem}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={PRIMARY} />
           }
           ListEmptyComponent={
-            <EmptyState
-              icon="chat-bubble-outline"
-              title="No messages yet"
-              message="When you contact a seller, the conversation will appear here"
-              ctaLabel="Browse Pets"
-              onCta={() => navigation.navigate('Home')}
-            />
+            filter === 'unread' ? (
+              <EmptyState
+                icon="mark-chat-read"
+                title="No unread messages"
+                message="You're all caught up!"
+              />
+            ) : filter === 'read' ? (
+              <EmptyState
+                icon="chat-bubble-outline"
+                title="No read conversations yet"
+                message="Conversations you've opened will show up here."
+              />
+            ) : (
+              <EmptyState
+                icon="chat-bubble-outline"
+                title="No messages yet"
+                message="When you contact a seller, the conversation will appear here"
+                ctaLabel="Browse Pets"
+                onCta={() => navigation.navigate('Home')}
+              />
+            )
           }
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           showsVerticalScrollIndicator={false}
@@ -200,6 +264,22 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: 2 },
   headerTitle: { fontSize: 22, fontWeight: '800', color: '#0d121b' },
+  tabs: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 13,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: { borderBottomColor: PRIMARY },
+  tabText: { fontSize: 13, fontWeight: '700', color: '#94a3b8' },
+  tabTextActive: { color: PRIMARY },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

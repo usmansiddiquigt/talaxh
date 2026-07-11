@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "714931192027",
+    "project_id": "comusmansiddiquigt-talash",
+    "storage_bucket": "comusmansiddiquigt-talash.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:714931192027:android:93ad51b8dce76b95950cfe",
+        "android_client_info": {
+          "package_name": "com.talashapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdGY1wFPncPjOqhlOCYIRWSmwNxnadyoI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:714931192027:android:76ad13a2a7fe97b2950cfe",
+        "android_client_info": {
+          "package_name": "com.usmansiddiquigt.talash"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdGY1wFPncPjOqhlOCYIRWSmwNxnadyoI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

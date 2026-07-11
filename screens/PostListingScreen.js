@@ -29,7 +29,6 @@ const CATEGORIES = [
   { key: 'rabbits',    label: 'Rabbits',    icon: 'cruelty-free'    },
   { key: 'fish',       label: 'Fish',       icon: 'water'           },
   { key: 'reptiles',   label: 'Reptiles',   icon: 'bug-report'      },
-  { key: 'small-pets', label: 'Small Pets', icon: 'favorite'        },
 ];
 
 // ── Pet type labels per category ──────────────────────────────────────────────
@@ -40,7 +39,6 @@ const PET_TYPES = {
   fish:        ['Young',  'Adult'],
   rabbits:     ['Young',  'Adult'],
   reptiles:    ['Young',  'Adult'],
-  'small-pets':['Young',  'Adult'],
 };
 
 // ── Health checkboxes ─────────────────────────────────────────────────────────

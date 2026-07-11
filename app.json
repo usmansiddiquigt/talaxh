@@ -25,7 +25,8 @@
     },
     "android": {
       "package": "com.usmansiddiquigt.talash",
-      "versionCode": 3,
+      "googleServicesFile": "./google-services.json",
+      "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundColor": "#ffffff"
@@ -33,7 +34,10 @@
       "permissions": [
         "INTERNET",
         "READ_EXTERNAL_STORAGE",
-        "READ_MEDIA_IMAGES"
+        "READ_MEDIA_IMAGES",
+        "POST_NOTIFICATIONS",
+        "WAKE_LOCK",
+        "VIBRATE"
       ]
     },
     "web": {

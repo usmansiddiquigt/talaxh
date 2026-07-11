@@ -149,7 +149,7 @@ function extractStoragePath(url) {
 export async function fetchUsers({ search } = {}) {
   let q = supabase
     .from('profiles')
-    .select('id, full_name, phone, location, is_admin, is_banned, banned_at, banned_reason, last_seen_at, created_at')
+    .select('id, full_name, phone, location, is_admin, is_banned, banned_at, banned_reason, last_seen_at, last_sign_in_at, created_at')
     .order('created_at', { ascending: false })
     .limit(200);
   if (search) q = q.ilike('full_name', `%${search}%`);

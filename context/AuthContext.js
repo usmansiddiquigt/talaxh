@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { AppState } from 'react-native';
 
 import * as api from '../lib/api';
+import { unregisterPushToken } from '../lib/push';
 import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext(null);
@@ -73,6 +74,9 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
+    // Remove this device's push token before signing out so pushes don't
+    // continue to land on a phone that's no longer "this user".
+    try { await unregisterPushToken(); } catch { /* best-effort */ }
     await api.logout();
     setUser(null);
     setSession(null);

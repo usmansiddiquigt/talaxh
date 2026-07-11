@@ -1,5 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import * as Notifications from 'expo-notifications';
 import { useCallback, useMemo, useState } from 'react';
 import {
   FlatList,
@@ -18,9 +19,12 @@ import * as api from '../lib/api';
 const PRIMARY = '#2C097F';
 
 const TYPE_META = {
-  listing_posted:  { icon: 'check-circle', color: '#10b981' },
-  new_message:     { icon: 'chat-bubble',  color: PRIMARY   },
-  listing_viewed:  { icon: 'visibility',   color: '#3b82f6' },
+  listing_posted:   { icon: 'check-circle',    color: '#10b981' },
+  new_message:      { icon: 'chat-bubble',     color: PRIMARY   },
+  listing_viewed:   { icon: 'visibility',      color: '#3b82f6' },
+  listing_pending:  { icon: 'hourglass-empty', color: '#f59e0b' },
+  listing_approved: { icon: 'check-circle',    color: '#10b981' },
+  listing_rejected: { icon: 'cancel',          color: '#ef4444' },
 };
 
 function timeAgo(dateStr) {
@@ -56,11 +60,21 @@ export default function NotificationsScreen({ navigation }) {
     try {
       const list = await api.fetchNotifications();
       setItems(list || []);
+      // Viewing this screen clears the bell badge: mark everything read in
+      // the DB, but keep this visit's local unread styling so the user can
+      // still see which items are new.
+      if ((list || []).some(i => !i.is_read)) {
+        api.markAllNotificationsRead().catch(() => {});
+      }
     } catch { setItems([]); }
     finally { setLoading(false); setRefreshing(false); }
   }, [token]);
 
-  useFocusEffect(useCallback(() => { fetchAll(); }, [fetchAll]));
+  useFocusEffect(useCallback(() => {
+    fetchAll();
+    // Clear the app-icon badge too — the user is looking at their alerts now.
+    Notifications.setBadgeCountAsync(0).catch(() => {});
+  }, [fetchAll]));
 
   const handleTap = async (item) => {
     // Mark as read
@@ -68,11 +82,13 @@ export default function NotificationsScreen({ navigation }) {
       try { await api.markNotificationRead(item.id); } catch { /* ignore */ }
       setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_read: true } : i));
     }
-    // Navigate based on type
+    // Navigate based on the data payload (same rule as push-tap routing in
+    // lib/push.js): conversation notifications → chat, any listing-related
+    // notification (approved / rejected / pending / viewed / posted) → ad.
     const d = item.data || {};
-    if (item.type === 'new_message' && d.conversation_id) {
+    if (d.conversation_id) {
       navigation.navigate('Conversation', { conversationId: d.conversation_id });
-    } else if ((item.type === 'listing_viewed' || item.type === 'listing_posted') && d.listing_id) {
+    } else if (d.listing_id) {
       navigation.navigate('PetDetail', { listingId: d.listing_id });
     }
   };

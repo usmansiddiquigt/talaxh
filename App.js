@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { UnreadProvider } from './context/UnreadContext';
 import LoadingSpinner from './components/LoadingSpinner';
 import { useAndroidImmersive } from './hooks/useAndroidImmersive';
 import { navigationRef } from './lib/navigation';
@@ -107,10 +108,12 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar hidden />
       <AuthProvider>
-        <NavigationContainer ref={navigationRef}>
-          <PushBootstrap />
-          <RootNavigator />
-        </NavigationContainer>
+        <UnreadProvider>
+          <NavigationContainer ref={navigationRef}>
+            <PushBootstrap />
+            <RootNavigator />
+          </NavigationContainer>
+        </UnreadProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

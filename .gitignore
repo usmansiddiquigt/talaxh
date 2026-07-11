@@ -34,6 +34,14 @@ yarn-error.*
 .env*.local
 .env
 
+# Firebase / Google service account keys — never commit
+firebase-service-account*.json
+google-service-account*.json
+*-firebase-adminsdk-*.json
+
+# EAS local credentials (keystore passwords) — never commit
+credentials.json
+
 # typescript
 *.tsbuildinfo
 

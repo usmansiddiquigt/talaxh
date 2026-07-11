@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
+import { useUnread } from '../context/UnreadContext';
 import * as api from '../lib/api';
 
 const PRIMARY = '#2C097F';
@@ -26,6 +27,7 @@ function formatTime(d) {
 export default function ConversationScreen({ navigation, route }) {
   const { conversationId, listing } = route.params;
   const { token, user } = useAuth();
+  const { refreshUnread } = useUnread();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
@@ -46,6 +48,8 @@ export default function ConversationScreen({ navigation, route }) {
     try {
       const list = await api.fetchMessages(conversationId);
       setMessages(list || []);
+      // fetchMessages marks inbound messages as read — update the tab badge.
+      refreshUnread();
     } catch { /* ignore */ }
     finally { if (!silent) setLoading(false); }
   };
